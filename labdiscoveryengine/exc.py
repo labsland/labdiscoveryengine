@@ -1,0 +1,3 @@
+
+class LabDiscoveryEngineError(Exception):
+    pass

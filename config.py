@@ -1,0 +1,2 @@
+# The Flask typical "config.py" file can be found in labdiscoveryengine.configuration.variables. The reason is that this application
+# must work just installing labdiscoveryengine, and we rely on other files for configuration purposes.
