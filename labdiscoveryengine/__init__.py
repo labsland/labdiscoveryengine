@@ -2,8 +2,10 @@ from flask import Flask, has_request_context, request, session
 from werkzeug.security import generate_password_hash
 
 from flask_babel import Babel
+from flask_assets import Environment, Bundle
 
 babel = Babel()
+environment = Environment()
 
 def create_app(config_name: str = 'default'):
 
@@ -13,6 +15,10 @@ def create_app(config_name: str = 'default'):
     app.config.from_object(configurations[config_name])
 
     babel.init_app(app, locale_selector=get_locale)
+    environment.init_app(app)
+
+    from .bundles import register_bundles
+    register_bundles(environment)
 
     from .views.user import user_blueprint
     from .views.login import login_blueprint

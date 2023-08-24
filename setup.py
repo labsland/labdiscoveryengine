@@ -1,6 +1,12 @@
 #-*-*- encoding: utf-8 -*-*-
-from setuptools import setup, find_packages
+import os
+import platform
+import subprocess
 from collections import OrderedDict
+
+from setuptools import setup, Command,  find_packages
+from setuptools.command.sdist import sdist
+from setuptools.command.install import install
 
 classifiers=[
     "Development Status :: 1 - Planning",
@@ -23,6 +29,31 @@ with open("README.md", "r") as fh:
 with open('requirements.txt') as f:
     requirements = [line.strip() for line in f if not line.startswith('#') and line.strip() != '']
 
+class NpmInstall(Command):
+
+    def initialize_options(self):
+        pass
+
+    def finalize_options(self):
+        pass
+
+    def run(self):
+        subprocess.call(['npm', 'install'], cwd='labdiscoveryengine/static')
+        if platform.system() in ['Windows', 'Microsoft']:
+            subprocess.call("devrc & flask assets build ", shell=True)
+        else:
+            subprocess.call('source devrc && flask assets build', shell=True)
+
+class CustomSDistCommand(sdist):
+    def run(self):
+        self.run_command('npm_install')
+        super().run()
+
+class CustomInstallCommand(install):
+    def run(self):
+        self.run_command('npm_install')
+        super().run()
+
 setup(name='labdiscoveryengine',
       version='0.0.1',
       description="Remote Laboratory Management System for creating laboratories (replacement of WebLab-Deusto)",
@@ -41,6 +72,11 @@ setup(name='labdiscoveryengine',
       license=cp_license,
       packages=find_packages(),
       install_requires=requirements,
+      cmdclass={
+        'npm_install': NpmInstall,
+        'sdist': CustomSDistCommand,
+        'install': CustomInstallCommand,
+      },
       entry_points='''
         [console_scripts]
         lde=labdiscoveryengine.cli:lde

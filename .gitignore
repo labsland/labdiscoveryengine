@@ -1,4 +1,6 @@
 # Byte-compiled / optimized / DLL files
+labdiscoveryengine/static/gen/
+labdiscoveryengine/static/node_modules
 __pycache__/
 *.py[cod]
 *$py.class
