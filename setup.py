@@ -30,22 +30,33 @@ with open('requirements.txt') as f:
     requirements = [line.strip() for line in f if not line.startswith('#') and line.strip() != '']
 
 class NpmInstall(Command):
+    description = 'Install npm dependencies and build assets'
+    user_options = [
+        ('force', None, 'Force npm install and flask assets build'),
+    ]
 
     def initialize_options(self):
-        pass
+        self.force = False
 
     def finalize_options(self):
         pass
 
     def run(self):
-        subprocess.call(['npm', 'install'], cwd='labdiscoveryengine/static')
-        if platform.system() in ['Windows', 'Microsoft']:
-            subprocess.call("devrc & flask assets build ", shell=True)
-        else:
-            subprocess.call('source devrc && flask assets build', shell=True)
+        if self.force or not os.path.exists('labdiscoveryengine/static/node_modules') or not os.path.exists('labdiscoveryengine/static/gen'):
+            try:
+                subprocess.check_call(['npm', 'install'], cwd='labdiscoveryengine/static')
+                if platform.system() in ['Windows', 'Microsoft']:
+                    subprocess.check_call("devrc & flask assets build", shell=True)
+                else:
+                    subprocess.check_call('. ./devrc && flask assets build', shell=True)
+            except subprocess.CalledProcessError as e:
+                print(f"The command '{' '.join(e.cmd)}' failed with error code {e.returncode}")
+                raise
 
 class CustomSDistCommand(sdist):
     def run(self):
+        npm_install_cmd = self.distribution.get_command_obj('npm_install')
+        npm_install_cmd.force = True
         self.run_command('npm_install')
         super().run()
 
@@ -72,6 +83,7 @@ setup(name='labdiscoveryengine',
       license=cp_license,
       packages=find_packages(),
       install_requires=requirements,
+      include_package_data=True,
       cmdclass={
         'npm_install': NpmInstall,
         'sdist': CustomSDistCommand,

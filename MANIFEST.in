@@ -1,0 +1,3 @@
+recursive-include labdiscoveryengine/static *
+recursive-include labdiscoveryengine/templates *
+recursive-include labdiscoveryengine/translations *
