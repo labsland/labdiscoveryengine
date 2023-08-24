@@ -1,5 +1,9 @@
-from flask import Flask
+from flask import Flask, has_request_context, request, session
 from werkzeug.security import generate_password_hash
+
+from flask_babel import Babel
+
+babel = Babel()
 
 def create_app(config_name: str = 'default'):
 
@@ -8,5 +12,59 @@ def create_app(config_name: str = 'default'):
     from .configuration.variables import configurations
     app.config.from_object(configurations[config_name])
 
+    babel.init_app(app, locale_selector=get_locale)
+
+    from .views.user import user_blueprint
+    from .views.login import login_blueprint
+
+    app.register_blueprint(login_blueprint)
+    app.register_blueprint(user_blueprint, url_prefix='/user')
     
     return app
+
+SUPPORTED_TRANSLATIONS = None
+
+def get_locale():
+    """ Defines what's the current language for the user. It uses different approaches. """
+    # 'en' is supported by default
+    global SUPPORTED_TRANSLATIONS
+    if SUPPORTED_TRANSLATIONS is None:
+        supported_languages = ['en']
+        for translation in babel.list_translations():
+            if translation.territory:
+                iter_language = '{}_{}'.format(translation.language, translation.territory)
+            else:
+                iter_language = translation.language
+            if iter_language not in supported_languages:
+                supported_languages.append(iter_language)
+
+        SUPPORTED_TRANSLATIONS = supported_languages
+    else:
+        supported_languages = SUPPORTED_TRANSLATIONS
+
+    locale = None
+
+    # This is used also from tasks (which are not in a context environment)
+    if has_request_context():
+        # If user accesses ?locale=es force it to Spanish, for example
+        locale = request.args.get('locale', None)
+        if locale not in supported_languages:
+            locale = None
+
+    # Otherwise, check what the web browser is using (the web browser might state multiple
+    # languages)
+    if has_request_context():
+        if locale is None:
+            if session.get('locale') is not None:
+                locale = session['locale']
+
+        if locale is None:
+            locale = request.accept_languages.best_match(supported_languages)
+
+    # Otherwise... use the default one (English)
+    if locale is None:
+        locale = 'en'
+
+    session['locale'] = locale
+
+    return locale

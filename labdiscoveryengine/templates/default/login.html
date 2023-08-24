@@ -1,0 +1,26 @@
+{% extends "default/_base.html" %}
+
+{% block container %}
+    <div class="row">
+
+        <div class="col">
+            <form>
+                <div class="mb-3">
+                    <label for="login" class="form-label">{{ gettext("Username") }}</label>
+                    <input type="email" class="form-control" id="login" aria-describedby="emailHelp">
+                </div>
+                <div class="mb-3">
+                    <label for="password" class="form-label">{{ gettext("Password") }}</label>
+                    <input type="password" class="form-control" id="password">
+                </div>
+                <button type="submit" class="btn btn-primary">{{ gettext("Sign in")}}</button>
+            </form>
+        </div>
+
+        <div class="col">
+            Foo bar
+        </div>
+
+    </div>
+
+{% endblock %}

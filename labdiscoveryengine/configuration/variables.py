@@ -6,6 +6,9 @@ class Config:
     # But if we provide a different LABDISCOVERYENGINE_DIRECTORY, it will search it elsewhere
     LABDISCOVERYENGINE_DIRECTORY: str = os.environ.get('LABDISCOVERYENGINE_DIRECTORY') or '.'
 
+    THEME: str = os.environ.get('THEME') or 'default'
+    SECRET_KEY: str = os.environ.get('SECRET_KEY') or 'secret'
+
     DEFAULT_MAX_TIME: float = float(os.environ.get('DEFAULT_MAX_TIME') or '300')
     DEFAULT_RESOURCE_LOGIN: Optional[str] = os.environ.get('DEFAULT_RESOURCE_LOGIN')
     DEFAULT_RESOURCE_PASSWORD: Optional[str] = os.environ.get('DEFAULT_RESOURCE_PASSWORD')
@@ -18,6 +21,7 @@ class TestingConfig(Config):
 
 class ProductionConfig(Config):
     DEBUG = False
+    SECRET_KEY: str = os.environ.get('SECRET_KEY')
 
 configurations = {
     'default': DevelopmentConfig,
