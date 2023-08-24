@@ -1,16 +1,26 @@
 import pathlib
 import datetime
+
+from collections import OrderedDict
 from functools import partial
 from typing import Any, Dict, NamedTuple, Optional, Union
 
 import yaml
 from flask import current_app
 
-from werkzeug.security import generate_password_hash
+from werkzeug.security import generate_password_hash, check_password_hash
 
-from labdiscoveryengine.configuration.exc import ConfigurationDirectoryNotFoundError, ConfigurationFileNotFoundError, InvalidConfigurationFoundError, InvalidConfigurationValueError, InvalidLaboratoryConfigurationError
+from labdiscoveryengine.configuration.exc import ConfigurationDirectoryNotFoundError, ConfigurationFileNotFoundError, InvalidConfigurationFoundError, InvalidConfigurationValueError, InvalidLaboratoryConfigurationError, InvalidUsernameConfigurationError
 
 from ..data import Administrator, ExternalUser, Laboratory, Resource
+
+
+# Define a custom representer for OrderedDict
+def represent_ordered_dict(dumper, data):
+    return dumper.represent_mapping('tag:yaml.org,2002:map', data.items())
+
+# Register the custom representer
+yaml.add_representer(OrderedDict, represent_ordered_dict, Dumper=yaml.Dumper)
 
 class ConfigurationFileNames:
     configuration = 'configuration'
@@ -68,16 +78,24 @@ def _generate_files_dict(directory: pathlib.Path) -> Dict[str, pathlib.Path]:
         ConfigurationFileNames.laboratories: directory / "laboratories.yml",
     }
 
+def get_current_deployment_directory() -> pathlib.Path:
+    """
+    Obtain the current deployment directory
+    """
+    directory: pathlib.Path = pathlib.Path(current_app.config['LABDISCOVERYENGINE_DIRECTORY'])
+    if not directory.exists():
+        raise ConfigurationDirectoryNotFoundError(f"Directory does not exist: {directory.absolute()}")
+    return directory
+
+
 def get_latest_configuration(configuration: Optional[StoredConfiguration] = None) -> StoredConfiguration:
     """
     If a configuration is provided, it will modify it if the files have changed. 
     
     If the configuration is not provided, it will create a new one.
     """
-    directory: pathlib.Path = pathlib.Path(current_app.config['LABDISCOVERYENGINE_DIRECTORY'])
-    if not directory.exists():
-        raise ConfigurationDirectoryNotFoundError(f"Directory does not exist: {directory.absolute()}")
-    
+    directory: pathlib.Path = get_current_deployment_directory()
+
     configuration_files: Dict[str, pathlib.Path] = _generate_files_dict(directory)
 
     if configuration is None:
@@ -109,14 +127,14 @@ def get_latest_configuration(configuration: Optional[StoredConfiguration] = None
                 except Exception as err:
                     raise InvalidConfigurationFoundError(f"Invalid configuration in file {configuration_file_path.absolute()}: {err}")
                 
-            configuration_values[configuration_type] = file_data
+            configuration_values[configuration_type] = file_data or {}
             configuration_checks[configuration_type] = modification_time_before_reading
 
-            modification_time_after_reading = datetime.datetime.utcfromtimestamp(configuration_file_path.stat().st_mtime())
+            modification_time_after_reading = datetime.datetime.utcfromtimestamp(configuration_file_path.stat().st_mtime)
     
     if ConfigurationFileNames.configuration in configuration_values:
         try:
-            configuration.variables.update(configuration_values[ConfigurationFileNames.configuration]['variables'])
+            configuration.variables.update(configuration_values[ConfigurationFileNames.configuration])
             configuration.last_check[ConfigurationFileNames.configuration] = configuration_checks[ConfigurationFileNames.configuration]
             configuration.apply_variables()
         except Exception as err:
@@ -125,7 +143,7 @@ def get_latest_configuration(configuration: Optional[StoredConfiguration] = None
     if ConfigurationFileNames.resources in configuration_values:
         try:
             added_resources = []
-            for resource_identifier, resource_data in configuration_values[ConfigurationFileNames.resources]['resources'].items():
+            for resource_identifier, resource_data in configuration_values[ConfigurationFileNames.resources].items():
                 resource_url = resource_data.get('url')                
                 resource_login = resource_data.get('login') or get_config('DEFAULT_RESOURCE_LOGIN')
                 resource_password = resource_data.get('password') or get_config('DEFAULT_RESOURCE_PASSWORD')
@@ -161,7 +179,7 @@ def get_latest_configuration(configuration: Optional[StoredConfiguration] = None
             laboratories = {
 
             }
-            for identifier, laboratory_data in configuration_values[ConfigurationFileNames.laboratories]['laboratories'].items():
+            for identifier, laboratory_data in configuration_values[ConfigurationFileNames.laboratories].items():
                 raw_resources = laboratory_data.get('resources', [])
                 resources = set()
                 for raw_resource in raw_resources:
@@ -218,6 +236,7 @@ def get_latest_configuration(configuration: Optional[StoredConfiguration] = None
 
                 configuration.external_users[login] = ExternalUser(
                                                             login=login,
+                                                            name=external_user_data.get('name') or login,
                                                             email=external_user_data.get('email'),
                                                             hashed_password=external_user_data['password'],
                                                             laboratories=external_user_laboratories
@@ -231,6 +250,8 @@ def get_latest_configuration(configuration: Optional[StoredConfiguration] = None
             configuration.last_check[ConfigurationFileNames.credentials] = configuration_checks[ConfigurationFileNames.credentials]
         except Exception as err:
             raise InvalidConfigurationValueError(f"Invalid credentials in file {configuration_files[ConfigurationFileNames.credentials].absolute()}: {err}")
+        
+    return configuration
 
 def _get_config(configuration: StoredConfiguration, key: str) -> Any:
     if key in configuration.variables:
@@ -330,3 +351,217 @@ def create_deployment_folder(directory: pathlib.Path, force: bool = False):
             ""
         ]))
     print("Deployment directory properly created")
+
+def _add_user_to_yaml(field: str, login: str, data: Dict[str, str]):
+    directory: pathlib.Path = get_current_deployment_directory()
+
+    configuration_files: Dict[str, pathlib.Path] = _generate_files_dict(directory)
+
+    configuration = get_latest_configuration()
+    if login in configuration.administrators:
+        raise InvalidUsernameConfigurationError(f"{login} already used by an administrator")
+    
+    if login in configuration.external_users:
+        raise InvalidUsernameConfigurationError(f"{login} already used by an external user")
+
+    # Read the YAML file as a list of lines
+    with open(configuration_files[ConfigurationFileNames.credentials], 'r') as credentials_file:
+        lines = credentials_file.readlines()
+
+    # Find the line index after the "field:" (e.g., administrators:) section and determine the indentation
+    idx = None
+    indentation = ""
+    field_found = False
+    for i, line in enumerate(lines):
+        if line.startswith(f'{field}:'):
+            field_found = True
+            idx = i + 1
+            # Find the indentation of the first non-empty line
+            while not lines[idx].strip() and not lines[idx].strip().startswith('#'):
+                idx += 1
+            indentation = lines[idx][:-len(lines[idx].lstrip())]
+            break
+
+    if not indentation:
+        # For example, 'external:' might not exist, so we copy the administrators one
+        idx = None
+        indentation = ""
+        for i, line in enumerate(lines):
+            if line.startswith(f'administrators:'):
+                idx = i + 1
+                # Find the indentation of the first non-empty line
+                while not lines[idx].strip() and not lines[idx].strip().startswith('#'):
+                    idx += 1
+                indentation = lines[idx][:-len(lines[idx].lstrip())]
+                break
+        
+        idx = len(lines)
+
+    yaml_user_content: str = '\n'.join([ indentation + line for line in yaml.dump(data, indent=len(indentation)).split('\n') ])
+
+    # Add the new user after the last existing user in the "administrators" section
+    while idx < len(lines) and lines[idx].strip() != '':
+        idx += 1
+
+    if not field_found:
+        lines.insert(idx, "\n")
+        lines.insert(idx+1, field + ':\n')
+
+    lines.insert(idx+2, yaml_user_content + '\n')
+
+    with open(configuration_files[ConfigurationFileNames.credentials], 'w') as credentials_file:
+        credentials_file.write("".join(lines))
+
+def create_admin_user(login: str, name: Optional[str], email: Optional[str], password: str):
+    """
+    Create a username in the file
+    """
+    data = {
+        login: OrderedDict()
+    }
+    if name:
+        data[login]['name'] = name
+    if email:
+        data[login]['email'] = email
+
+    data[login]['password'] = generate_password_hash(password)
+    
+    _add_user_to_yaml('administrators', login, data)
+
+    print(f"Administrator {login} added")
+
+def create_external_user(login: str, name: Optional[str], email: Optional[str], password: str):
+    """
+    Create a username in the file
+    """
+    data = {
+        login: OrderedDict()
+    }
+    if name:
+        data[login]['name'] = name
+    if email:
+        data[login]['email'] = email
+
+    data[login]['password'] = generate_password_hash(password)
+    data[login]['laboratories'] = 'all'
+
+    _add_user_to_yaml('external', login, data)
+
+    print(f"External user {login} added")
+
+def list_users(administrators: bool = False, external_users: bool = False):
+    """
+    List the users in the file
+    """
+    configuration = get_latest_configuration()
+
+    if administrators:
+        print("Administrators:")
+        if configuration.administrators:
+            for login in configuration.administrators:
+                print(f" - {login}")
+                print(f"   - name: {configuration.administrators[login].name}")
+                if configuration.administrators[login].email:
+                    print(f"   - email: {configuration.administrators[login].email}")
+        else:
+            print("No administrator in the system")
+
+    if external_users:
+        print("External users:")
+        if configuration.external_users:
+            for login in configuration.external_users:
+                print(f" - {login}")
+                print(f"   - name: {configuration.external_users[login].name}")
+                if configuration.external_users[login].email:
+                    print(f"   - email: {configuration.external_users[login].email}")
+                print(f"   - laboratories: {configuration.external_users[login].laboratories}")
+        else:
+            print("No external user in the system")
+
+def change_credentials_password(field: str, login: str, password: str):
+    """
+    Change the password of an admin or user
+    """
+    hashed_password = generate_password_hash(password)
+    directory: pathlib.Path = get_current_deployment_directory()
+
+    configuration_files: Dict[str, pathlib.Path] = _generate_files_dict(directory)
+
+    with open(configuration_files[ConfigurationFileNames.credentials], 'r') as file:
+        lines = file.readlines()
+
+    # Variables to track the indentation levels
+    login_indentation = password_indentation = -1
+
+    # Flags to determine if we are inside the correct sections
+    inside_field = inside_login = False
+    found = False
+
+    for i, line in enumerate(lines):
+        stripped_line = line.lstrip()
+
+        if not stripped_line or stripped_line.startswith("#"):
+            continue
+
+        indentation = len(line) - len(stripped_line)
+
+        if inside_field:
+            if login_indentation == -1:
+                login_indentation = indentation
+            
+            if inside_login:
+                if password_indentation == -1:
+                    password_indentation = indentation
+
+        if line.startswith(field + ":"):
+            inside_field = True
+
+        if inside_field and login_indentation != -1 and line.startswith(' ' * login_indentation + login + ":"):
+            inside_login = True
+
+        if inside_field and inside_login and line.startswith(' ' * password_indentation + "password:"):
+            lines[i] = " " * indentation + f"password: {hashed_password}\n"
+            found = True
+            break
+
+        if inside_field and indentation == 0 and not line.startswith(field + ":"):
+            inside_field = False
+            login_indentation = password_indentation = -1
+
+        if inside_field and indentation == login_indentation and not stripped_line.startswith(login + ":"):
+            inside_login = False
+            password_indentation = -1
+
+    with open(configuration_files[ConfigurationFileNames.credentials], 'w') as file:
+        file.writelines(lines)
+
+    if found:
+        print(f"Password updated successfully for field: {field} and login: {login}")
+    else:
+        print(f"login: {login} not found for field: {field}")
+
+def check_credentials_password(field: str, login: str, password: str):
+    """
+    Given a field and a username, check if the password is correct or not.
+    """
+    configuration = get_latest_configuration()
+
+    if field == 'administrators':
+        if login in configuration.administrators:
+            if check_password_hash(configuration.administrators[login].hashed_password, password):
+                print(f"That password is correct for user {login}")
+                return True
+            else:
+                print(f"That password is INCORRECT for user {login}")
+        else:
+            print(f"login: {login} not found for field: {field}")
+    elif field == 'external':
+        if login in configuration.external_users:
+            if check_password_hash(configuration.external_users[login].hashed_password, password):
+                print(f"That password is correct for user {login}")
+                return True
+            else:
+                print(f"That password is INCORRECT for user {login}")
+        else:
+            print(f"login: {login} not found for field: {field}")
+    return False

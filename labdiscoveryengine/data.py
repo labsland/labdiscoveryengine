@@ -28,6 +28,8 @@ class ExternalUser(NamedTuple):
     log in as an external user.
     """
     login: str
+    name: str
+    email: Optional[str]
     hashed_password: str
     laboratories: Iterable[str]
 

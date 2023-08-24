@@ -18,3 +18,6 @@ class InvalidConfigurationValueError(ConfigurationError):
 
 class InvalidLaboratoryConfigurationError(ConfigurationError):
     pass
+
+class InvalidUsernameConfigurationError(ConfigurationError):
+    pass
