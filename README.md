@@ -1,5 +1,11 @@
 # LabDiscoveryEngine
 
+
+[![CircleCI](https://circleci.com/gh/labsland/labdiscoveryengine.svg?style=svg)](https://circleci.com/gh/labsland/labdiscoveryengine)
+[![Supported Versions](https://img.shields.io/pypi/pyversions/requests.svg)](https://pypi.org/project/requests)
+![pypi](https://img.shields.io/pypi/v/labdiscoveryengine.svg)
+
+
 LabDiscoveryEngine is an evolved and modern RLMS building upon WebLabDeusto's experience
 
 ## First steps
