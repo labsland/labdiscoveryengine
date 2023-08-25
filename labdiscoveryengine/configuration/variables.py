@@ -12,6 +12,8 @@ class Config:
     DEFAULT_MAX_TIME: float = float(os.environ.get('DEFAULT_MAX_TIME') or '300')
     DEFAULT_RESOURCE_LOGIN: Optional[str] = os.environ.get('DEFAULT_RESOURCE_LOGIN')
     DEFAULT_RESOURCE_PASSWORD: Optional[str] = os.environ.get('DEFAULT_RESOURCE_PASSWORD')
+    TESTING = False
+    DEBUG = False
 
 class DevelopmentConfig(Config):
     DEBUG = True
