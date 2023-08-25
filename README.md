@@ -2,7 +2,7 @@
 
 
 [![CircleCI](https://circleci.com/gh/labsland/labdiscoveryengine.svg?style=svg)](https://circleci.com/gh/labsland/labdiscoveryengine)
-[![Supported Versions](https://img.shields.io/pypi/pyversions/requests.svg)](https://pypi.org/project/requests)
+[![Supported Versions](https://img.shields.io/pypi/pyversions/labdiscoveryengine.svg)](https://pypi.org/project/labdiscoveryengine)
 ![pypi](https://img.shields.io/pypi/v/labdiscoveryengine.svg)
 
 
