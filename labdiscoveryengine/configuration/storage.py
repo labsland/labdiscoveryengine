@@ -1,9 +1,10 @@
+import time
 import pathlib
+import secrets
 import datetime
 
 from collections import OrderedDict
 from functools import partial
-import time
 from typing import Any, Dict, NamedTuple, Optional, Union
 
 import yaml
@@ -283,14 +284,16 @@ def create_deployment_folder(directory: pathlib.Path, force: bool = False):
         f.write('\n'.join([
             "# In this file you store the standard configuration variables",
             "# ",
-            "# DEFAULT_MAX_TIME=300 # So you do not need to put max_time: 300 in each laboratory",
-            "# DEFAULT_RESOURCE_LOGIN=lde # If you have the same login in all the laboratories",
-            "# DEFAULT_RESOURCE_PASSWORD=lde # If you have the same password in all the laboratories",
+            "# DEFAULT_MAX_TIME: 300 # So you do not need to put max_time: 300 in each laboratory",
+            "# DEFAULT_RESOURCE_LOGIN: lde # If you have the same login in all the laboratories",
+            "# DEFAULT_RESOURCE_PASSWORD: lde # If you have the same password in all the laboratories",
             "# ",
-            "# REDIS_URL = 'redis://localhost:6379/0'",
-            "# MONGO_URL = 'mongodb://localhost:27017/lde'",
-            "# MYSQL_DATABASE_URL = 'mysql+pymysql://lde:password@localhost:3306/lde' # Optional",
-            ""
+            "# REDIS_URL: redis://localhost:6379/0",
+            "# MONGO_URL: mongodb://localhost:27017/lde",
+            "# MYSQL_DATABASE_URL: mysql+pymysql://lde:password@localhost:3306/lde # Optional",
+            "",
+            f"SECRET_KEY: {secrets.token_urlsafe()}",
+            "",
         ]))
 
     with filenames[ConfigurationFileNames.resources].open('w') as f:

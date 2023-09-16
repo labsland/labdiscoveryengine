@@ -1,6 +1,8 @@
+import os
 from flask import Flask, has_request_context, request, session
 from werkzeug.security import generate_password_hash
 
+import yaml
 from flask_babel import Babel
 from flask_assets import Environment, Bundle
 
@@ -10,6 +12,11 @@ environment = Environment()
 def create_app(config_name: str = 'default'):
 
     app = Flask(__name__)
+
+    if os.path.exists('configuration.yml'):
+        configuration = yaml.safe_load(open('configuration.yml'))
+        for configuration_key, configuration_value in configuration.items():
+            os.environ[configuration_key] = str(configuration_value)
 
     from .configuration.variables import configurations
     app.config.from_object(configurations[config_name])
