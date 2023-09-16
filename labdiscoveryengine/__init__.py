@@ -1,18 +1,30 @@
 import os
-from flask import Flask, has_request_context, request, session
+from flask import Flask, has_request_context, request, session, current_app
 from werkzeug.security import generate_password_hash
 
 import yaml
 from flask_babel import Babel
 from flask_assets import Environment, Bundle
 
+try:
+    from flask_debugtoolbar import DebugToolbarExtension
+except ImportError:
+    DebugToolbarExtension = None
+
 babel = Babel()
 environment = Environment()
+if DebugToolbarExtension is not None:
+    toolbar = DebugToolbarExtension()
+else:
+    toolbar = None
 
 def create_app(config_name: str = 'default'):
 
     app = Flask(__name__)
 
+    # Load the configuration from configuration.yml BEFORE importing the
+    # configuration.variables module, so it uses os.environ which can be
+    # precisely the configuration.yml file as defaults.
     if os.path.exists('configuration.yml'):
         configuration = yaml.safe_load(open('configuration.yml'))
         for configuration_key, configuration_value in configuration.items():
@@ -21,8 +33,17 @@ def create_app(config_name: str = 'default'):
     from .configuration.variables import configurations
     app.config.from_object(configurations[config_name])
 
+    from .configuration.storage import get_latest_configuration
+    with app.app_context():
+        latest_configuration = get_latest_configuration()
+
+    app.config['LDE_CONFIG'] = latest_configuration
+
     babel.init_app(app, locale_selector=get_locale)
     environment.init_app(app)
+
+    if toolbar is not None:
+        toolbar.init_app(app)
 
     from .bundles import register_bundles
     register_bundles(environment)

@@ -1,0 +1,10 @@
+# In this file you store the standard configuration variables
+# 
+# DEFAULT_MAX_TIME: 300 # So you do not need to put max_time: 300 in each laboratory
+# DEFAULT_RESOURCE_LOGIN: lde # If you have the same login in all the laboratories
+# DEFAULT_RESOURCE_PASSWORD: lde # If you have the same password in all the laboratories
+# 
+# REDIS_URL: redis://localhost:6379/0
+# MONGO_URL: mongodb://localhost:27017/lde
+# MYSQL_DATABASE_URL: mysql+pymysql://lde:password@localhost:3306/lde # Optional
+SECRET_KEY: ivTp3UApt7epzy0YzlNOEGirzKe1gHC4JQJc_rcuS2s

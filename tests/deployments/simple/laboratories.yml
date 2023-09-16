@@ -1,0 +1,17 @@
+# This file contains the laboratories, and associate them to the resources. In LDE, you can
+# have multiple remote laboratories, and multiple copies of each of them. You might even have
+# resources shared among two laboratories. For example, in LabsLand, the Arduino Robot is a remote
+# laboratory and you can select any robot, or robots that have one type of path or another type
+# of path. If we had 4 robots (2 with one path and 2 with the other), we can have 3 laboratories: one
+# with two resources, the other one with the other 2 resources and a general one with all 4 resources
+# 
+# This file is focused on information that the user should be aware: name of the lab, category, image, etc.
+
+dummy:
+  display_name: Dummy Lab # optional
+  category: Dummy laboratories # optional
+  max_time: 300 # optional, maximum time users can use the lab, in seconds
+  image: https://example.com/wherever/is/your/logo.jpg # optional
+  resources: # alternatively you can put them inline: dummy-1, dummy-2
+  - dummy-1
+  - dummy-2

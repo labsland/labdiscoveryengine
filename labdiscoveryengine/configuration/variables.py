@@ -14,9 +14,12 @@ class Config:
     DEFAULT_RESOURCE_PASSWORD: Optional[str] = os.environ.get('DEFAULT_RESOURCE_PASSWORD')
     TESTING = False
     DEBUG = False
+    
+    DEBUG_TB_INTERCEPT_REDIRECTS = False
 
 class DevelopmentConfig(Config):
     DEBUG = True
+    LABDISCOVERYENGINE_DIRECTORY: str = os.environ.get('LABDISCOVERYENGINE_DIRECTORY') or 'tests/deployments/simple'
 
 class TestingConfig(Config):
     TESTING = True
