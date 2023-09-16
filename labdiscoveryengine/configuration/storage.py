@@ -3,6 +3,7 @@ import datetime
 
 from collections import OrderedDict
 from functools import partial
+import time
 from typing import Any, Dict, NamedTuple, Optional, Union
 
 import yaml
@@ -264,17 +265,17 @@ def create_deployment_folder(directory: pathlib.Path, force: bool = False):
     """
     if directory.exists():
         if not force:
-            result = input(f"The directory ({directory}) already exists. Do you want to overwrite it? (y/n) ")
+            result = input(f"[{time.asctime()}] The directory ({directory}) already exists. Do you want to overwrite it? (y/n) ")
             while result not in ('y', 'n'):
-                result = input(f"Invalid answer. Do you want to overwrite it? (y/n) ")
+                result = input(f"[{time.asctime()}] Invalid answer. Do you want to overwrite it? (y/n) ")
             
             if result == 'n':
-                print(f"Cancelling deployment creation")
+                print(f"[{time.asctime()}] Cancelling deployment creation")
                 return
     else:
         directory.mkdir()
 
-    print(f"Creating configuration files in {directory.absolute()}...")
+    print(f"[{time.asctime()}] Creating configuration files in {directory.absolute()}...")
     
     filenames = _generate_files_dict(directory)
 
@@ -350,7 +351,7 @@ def create_deployment_folder(directory: pathlib.Path, force: bool = False):
             f"    password: {generate_password_hash('password')}",
             ""
         ]))
-    print("Deployment directory properly created")
+    print(f"[{time.asctime()}] Deployment directory {directory.absolute()} properly created")
 
 def _add_user_to_yaml(field: str, login: str, data: Dict[str, str]):
     directory: pathlib.Path = get_current_deployment_directory()
