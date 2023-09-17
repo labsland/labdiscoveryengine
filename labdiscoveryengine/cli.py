@@ -7,7 +7,7 @@ import functools
 import multiprocessing
 import asyncio
 
-from typing import Callable, Optional
+from typing import Callable, Dict, Optional
 
 import click
 
@@ -15,7 +15,7 @@ import labdiscoveryengine
 from labdiscoveryengine import create_app
 from labdiscoveryengine.configuration.exc import InvalidUsernameConfigurationError
 from labdiscoveryengine.configuration.storage import change_credentials_password, create_admin_user, create_deployment_folder, create_external_user as storage_create_external_user, list_users, check_credentials_password
-from labdiscoveryengine.queues.runner import main as runner_main
+from labdiscoveryengine.scheduling.runner import main as runner_main
 
 def with_app(func: Callable):
     """
@@ -23,7 +23,7 @@ def with_app(func: Callable):
     """
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
-        app = create_app()
+        app = create_app(os.environ.get('FLASK_CONFIG', 'production'))
         with app.app_context():
             return func(*args, **kwargs)
 
@@ -54,8 +54,12 @@ def create_deployment(directory: str, force: bool):
     os.makedirs(directory_path / "logs", exist_ok=True)
     os.makedirs(directory_path / "scripts", exist_ok=True)
 
+    script_variables = {
+        "FLASK_CONFIG": "production"
+    }
+
     worker_script_lines = [
-        _generate_running_script(directory_path),
+        _generate_running_script(directory_path, variables=script_variables),
     ]
     worker_script_lines.append("# Run the worker")
     worker_script_lines.append("exec lde worker run")
@@ -84,7 +88,7 @@ def is_virtual_environment() -> bool:
     # In venv, sys.base_prefix is the original one (e.g., '/usr/') and sys.prefix is the venv one (e.g., /home/user/.virtualenvs/module)
     return hasattr(sys, 'real_prefix') or (hasattr(sys, 'base_prefix') and sys.base_prefix != sys.prefix)
 
-def _generate_running_script(directory_path: pathlib.Path):
+def _generate_running_script(directory_path: pathlib.Path, variables: Optional[Dict[str, str]] = None):
     lines = [
         "#!/usr/bin/env bash",
         "",
@@ -106,6 +110,12 @@ def _generate_running_script(directory_path: pathlib.Path):
     lines.append(f"cd {directory_path.absolute()}")
     lines.append("")
 
+    if variables is not None:
+        lines.append("# Setting variables before prodrc so you can override them there")
+        for variable, value in variables.items():
+            lines.append(f"export {variable}={value}")
+        lines.append("")
+
     lines.append("# Import prodrc configuration (if it exists)")
     lines.append("if [ -f prodrc ]; then")
     lines.append("    source prodrc")
@@ -122,9 +132,17 @@ def _generate_running_script(directory_path: pathlib.Path):
 @click.option('--port', type=int, default=8080, help="Port used")
 @click.option('--workers', type=int, default=None, help="Number of workers used (if not gevent). By default, workers * 2 + 1")
 @click.option('--use-gevent', is_flag=True, help="Use gunicorn with gevent (monkeypatching everything)")
-def deployments_add_gunicorn_script(directory: str, force: bool, keep_alive: int, port: int, workers: int, use_gevent: bool):
+@click.option('--base-url', type=str, default="/lde", help="Base URL for the application")
+def deployments_add_gunicorn_script(directory: str, force: bool, keep_alive: int, port: int, workers: int, use_gevent: bool, base_url: str):
+    """
+    Add the required script to run LDE using gunicorn
+    """
     if os.name != 'posix':
         print("Warning: supervisor is only available on POSIX systems. Consider using WSL or a UNIX system")
+
+    if not base_url.startswith('/'):
+        print(f"[{time.asctime()}] --base-url must start with /")
+        return
 
     directory_path = pathlib.Path(directory)
 
@@ -144,13 +162,14 @@ def deployments_add_gunicorn_script(directory: str, force: bool, keep_alive: int
     print(f"[{time.asctime()}] Writing wsgi_app to {directory_path.absolute()}/wsgi_app.py")
     directory_path.joinpath("scripts", "wsgi_app.py").write_text('\n'.join(wsgi_app_content))
 
-    lines = [
-        _generate_running_script(directory_path),
-        "# Locate scripts/wsgi_app.py",
-        "export PYTHONPATH=$PYTHONPATH:scripts",
-        "",
-    ]
-    
+    script_variables = {
+        "SCRIPT_NAME": base_url,
+        "SESSION_COOKIE_PATH": base_url,
+        "PORT": port,
+        "BIND": "0.0.0.0",
+        "KEEP_ALIVE": keep_alive,
+    }
+
     additional_args = ""
     if use_gevent:
         additional_args += "--worker-class gevent"
@@ -159,10 +178,20 @@ def deployments_add_gunicorn_script(directory: str, force: bool, keep_alive: int
             # The recommended number of workers is 2 * the number of CPUs + 1.
             workers = 2 * multiprocessing.cpu_count() + 1
 
-        additional_args += f"--workers {workers}"
+        script_variables['WORKERS'] = workers
 
+        additional_args += f"--workers $WORKERS"
+
+
+    lines = [
+        _generate_running_script(directory_path, variables=script_variables),
+        "# Locate scripts/wsgi_app.py",
+        "export PYTHONPATH=$PYTHONPATH:scripts",
+        "",
+    ]
+    
     lines.append("# Run gunicorn")
-    lines.append(f"exec gunicorn {additional_args} --keep-alive {keep_alive} --bind 0.0.0.0:{port} wsgi_app:application")
+    lines.append(f"exec gunicorn {additional_args} --keep-alive $KEEP_ALIVE --bind $BIND:$PORT wsgi_app:application")
 
     print(f"[{time.asctime()}] Writing gunicorn script to {directory_path.absolute()}/gunicorn_script.sh")
     directory_path.joinpath("scripts", "gunicorn_script.sh").write_text("\n".join(lines) + "\n")
@@ -173,6 +202,76 @@ def deployments_add_gunicorn_script(directory: str, force: bool, keep_alive: int
     print(f"[{time.asctime()}] or:")
     print(f"[{time.asctime()}] $ lde deployments add-supervisor-config -d {directory} --help (for more options)")
 
+@deployments.command('add-apache-config')
+@click.option('-d', '--directory', type=click.Path(dir_okay=True, exists=True, file_okay=False), required=True, help="Deployment directory")
+@click.option('-f', '--force', is_flag=True, help="Force if the folder already exists / has contents")
+@click.option('--port', type=int, default=8080, help="Port used")
+@click.option('--base-url', type=str, default="/lde", help="Base URL for the application")
+@click.option('--retry', type=int, default=3, help="Number of retries")
+@click.option('--connection-timeout', type=int, default=5, help="Connection timeout")
+@click.option('--timeout', type=int, default=60, help="Timeout")
+def deployments_add_apache_config(directory: str, force: bool, port: int, base_url: str, retry: int, connection_timeout: int, timeout: int):
+    """
+    Create the Apache configuration
+    """
+    directory_path = pathlib.Path(directory)
+
+    if directory_path.joinpath("scripts", "apache.conf").exists() and not force:
+        print(f"[{time.asctime()}] Apache configuration already exists. Use --force to overwrite.")
+        return
+    
+    if not base_url.startswith('/'):
+        print(f"[{time.asctime()}] --base-url must start with /")
+        return
+
+    print(f"[{time.asctime()}] Writing Apache configuration to {directory_path.absolute()}/scripts/apache.conf")
+    directory_path.joinpath("scripts", "apache.conf").write_text(
+        "\n".join([
+            f"ProxyPass {base_url} http://127.0.0.1:{port}{base_url} retry={retry} connectiontimeout={connection_timeout} timeout={timeout}"
+        ]) + "\n"
+    )
+
+    name = os.path.basename(directory_path.absolute())
+
+    print(f"[{time.asctime()}] Configuration written. Now add this configuration to Apache:")
+    print(f"[{time.asctime()}] # cp {directory_path.absolute()}/scripts/apache.conf /etc/apache2/conf-available/{name}.conf")
+    print(f"[{time.asctime()}] # a2enconf {name}")
+    print(f"[{time.asctime()}] # a2enmod proxy proxy_http")
+    print(f"[{time.asctime()}] # systemctl reload apache2")
+
+@deployments.command('add-nginx-config')
+@click.option('-d', '--directory', type=click.Path(dir_okay=True, exists=True, file_okay=False), required=True, help="Deployment directory")
+@click.option('-f', '--force', is_flag=True, help="Force if the folder already exists / has contents")
+@click.option('--port', type=int, default=8080, help="Port used")
+@click.option('--base-url', type=str, default="/lde", help="Base URL for the application")
+def deployments_add_nginx_config(directory: str, force: bool, port: int, base_url: str):
+    """
+    Create the nginx configuration
+    """
+    directory_path = pathlib.Path(directory)
+
+    if directory_path.joinpath("scripts", "nginx.conf").exists() and not force:
+        print(f"[{time.asctime()}] Nginx configuration already exists. Use --force to overwrite.")
+        return
+    
+    if not base_url.startswith('/'):
+        print(f"[{time.asctime()}] --base-url must start with /")
+        return
+
+    print(f"[{time.asctime()}] Writing Nginx configuration to {directory_path.absolute()}/scripts/nginx.conf")
+    print("NOT IMPLEMENTED YET")
+    # directory_path.joinpath("scripts", "nginx.conf").write_text(
+    #     "\n".join([
+    #         f"ProxyPass {base_url} http://127.0.0.1:{port}{base_url} retry={retry} connectiontimeout={connection_timeout} timeout={timeout}"
+    #     ]) + "\n"
+    # )
+
+    # name = os.path.basename(directory_path.absolute())
+
+    # print("[{time.asctime()}] Configuration written. Now add this configuration to Apache:")
+    # print(f"[{time.asctime()}] # ln -s {directory_path.absolute()}/scripts/supervisor.conf /etc/supervisor/conf.d/{name}.conf")
+    # print(f"[{time.asctime()}] # systemctl reload apache2")    
+
 
 @deployments.command('add-supervisor-config')
 @click.option('-d', '--directory', type=click.Path(dir_okay=True, exists=True, file_okay=False), required=True, help="Deployment directory")
@@ -182,6 +281,9 @@ def deployments_add_gunicorn_script(directory: str, force: bool, keep_alive: int
 @click.option('--log-maxbytes', default='20MB', type=str, help="Size of each log file.")
 @click.option('--log-backups', default=2, type=int, help="Number of backups of each log file.")
 def deployments_add_supervisor(directory: str, force: bool, name: str, user: str, log_maxbytes: int, log_backups: int):
+    """
+    Add supervisor configuration files.
+    """
     if os.name != 'posix':
         print("Warning: supervisor is only available on POSIX systems. Consider using WSL or a UNIX system")
 
@@ -265,8 +367,6 @@ def deployments_add_supervisor(directory: str, force: bool, name: str, user: str
     print(f"[{time.asctime()}] # supervisorctl status {name}:{name}-gunicorn")
     print(f"[{time.asctime()}] # supervisorctl status {name}:{name}-worker")
     print(f"[{time.asctime()}]")
-
-
 
 @lde.group('credentials')
 def credentials_group():

@@ -149,6 +149,7 @@ def get_latest_configuration(configuration: Optional[StoredConfiguration] = None
                 resource_url = resource_data.get('url')                
                 resource_login = resource_data.get('login') or get_config('DEFAULT_RESOURCE_LOGIN')
                 resource_password = resource_data.get('password') or get_config('DEFAULT_RESOURCE_PASSWORD')
+                resource_features = resource_data.get('features') or []
 
                 if resource_login is None:
                     raise InvalidConfigurationValueError(f"Resource {resource_identifier} has no 'login' defined")
@@ -158,12 +159,17 @@ def get_latest_configuration(configuration: Optional[StoredConfiguration] = None
                 
                 if not resource_url:
                     raise InvalidConfigurationValueError(f"Resource {resource_identifier} has no 'url' defined")
+                
+                for resource_feature in resource_features:
+                    if not isinstance(resource_feature, str):
+                        raise InvalidConfigurationValueError(f"Resource {resource_identifier} has an invalid feature (must be str): {resource_feature}")
 
                 configuration.resources[resource_identifier] = Resource(
                     identifier=resource_identifier,
                     url=resource_url,
                     login=resource_login,
-                    password=resource_password
+                    password=resource_password,
+                    features=resource_features
                 )
                 
                 added_resources.append(resource_identifier)
@@ -310,11 +316,13 @@ def create_deployment_folder(directory: pathlib.Path, force: bool = False):
             "  url: http://localhost:5000",
             "  login: lde # If always the same use DEFAULT_RESOURCE_LOGIN in credentials.yml",
             "  password: password # If always the same use DEFAULT_RESOURCE_PASSWORD in credentials.yml",
+            "  features: [feature1, feature2] # So we can reserve with a particular feature",
             "dummy-2:",
             "  # Include the URL and credentials of the remote laboratory",
             "  url: http://localhost:5001",
             "  login: lde",
             "  password: password",
+            "  features: [feature1, feature3] # So we can reserve with a particular feature",
             ""
         ]))
 

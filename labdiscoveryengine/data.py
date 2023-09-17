@@ -1,4 +1,4 @@
-from typing import Iterable, NamedTuple, Optional, Dict, Set, Union
+from typing import Iterable, List, NamedTuple, Optional, Dict, Set, Union
 
 from flask import current_app
 from werkzeug.security import check_password_hash
@@ -48,6 +48,7 @@ class Resource(NamedTuple):
     url: str
     login: str
     password: str
+    features: List[str]
 
 class Laboratory(NamedTuple):
     """

@@ -1,6 +1,6 @@
 import os
-from flask import Flask, has_request_context, request, session, current_app
-from werkzeug.security import generate_password_hash
+from typing import Optional
+from flask import Flask, has_request_context, request, session
 
 import yaml
 from flask_babel import Babel
@@ -18,7 +18,9 @@ if DebugToolbarExtension is not None:
 else:
     toolbar = None
 
-def create_app(config_name: str = 'default'):
+def create_app(config_name: Optional[str] = None):
+    if config_name is None:
+        config_name = 'default'
 
     app = Flask(__name__)
 
@@ -50,9 +52,11 @@ def create_app(config_name: str = 'default'):
 
     from .views.user import user_blueprint
     from .views.login import login_blueprint
+    from .views.external import external_v1_blueprint
 
     app.register_blueprint(login_blueprint)
     app.register_blueprint(user_blueprint, url_prefix='/user')
+    app.register_blueprint(external_v1_blueprint, url_prefix='/external/v1')
     
     return app
 

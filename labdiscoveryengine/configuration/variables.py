@@ -23,6 +23,7 @@ class DevelopmentConfig(Config):
 
 class TestingConfig(Config):
     TESTING = True
+    LABDISCOVERYENGINE_DIRECTORY: str = os.environ.get('LABDISCOVERYENGINE_DIRECTORY') or 'tests/deployments/simple'
 
 class ProductionConfig(Config):
     DEBUG = False
