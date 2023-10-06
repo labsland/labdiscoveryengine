@@ -1,5 +1,5 @@
 from flask import Blueprint, session, redirect, url_for, g
-
+from labdiscoveryengine.utils import lde_config
 from labdiscoveryengine.views.utils import render_themed_template
 
 user_blueprint = Blueprint('user', __name__)
@@ -20,4 +20,4 @@ def index():
     """
     This is the user index page.
     """
-    return render_themed_template('user/index.html')
+    return render_themed_template('user/index.html', laboratories=lde_config.laboratories.values())

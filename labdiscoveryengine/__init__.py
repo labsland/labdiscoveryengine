@@ -53,11 +53,13 @@ def create_app(config_name: Optional[str] = None):
     from .views.user import user_blueprint
     from .views.login import login_blueprint
     from .views.external import external_v1_blueprint
+    from .views.public import public_blueprint
 
     app.register_blueprint(login_blueprint)
     app.register_blueprint(user_blueprint, url_prefix='/user')
     app.register_blueprint(external_v1_blueprint, url_prefix='/external/v1')
-    
+    app.register_blueprint(public_blueprint, url_prefix='/public')
+
     return app
 
 SUPPORTED_TRANSLATIONS = None

@@ -12,6 +12,7 @@ class Config:
     DEFAULT_MAX_TIME: float = float(os.environ.get('DEFAULT_MAX_TIME') or '300')
     DEFAULT_RESOURCE_LOGIN: Optional[str] = os.environ.get('DEFAULT_RESOURCE_LOGIN')
     DEFAULT_RESOURCE_PASSWORD: Optional[str] = os.environ.get('DEFAULT_RESOURCE_PASSWORD')
+    DEFAULT_LAB_VISIBILITY: str = os.environ.get('DEFAULT_LAB_VISIBILITY') or 'public'
     TESTING = False
     DEBUG = False
     

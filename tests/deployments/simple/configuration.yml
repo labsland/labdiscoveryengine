@@ -1,4 +1,5 @@
-# In this file you store the standard configuration variables
+# In this file you store the standard configuration variables.
+# Note: The variables in this file are loaded into the environment before loading the standard Flask-style configuration in e.g. variables.py.
 # 
 # DEFAULT_MAX_TIME: 300 # So you do not need to put max_time: 300 in each laboratory
 # DEFAULT_RESOURCE_LOGIN: lde # If you have the same login in all the laboratories
@@ -8,3 +9,4 @@
 # MONGO_URL: mongodb://localhost:27017/lde
 # MYSQL_DATABASE_URL: mysql+pymysql://lde:password@localhost:3306/lde # Optional
 SECRET_KEY: ivTp3UApt7epzy0YzlNOEGirzKe1gHC4JQJc_rcuS2s
+DEFAULT_LAB_VISIBILITY: public # public or private
