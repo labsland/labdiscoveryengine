@@ -1,21 +1,27 @@
 {% extends "default/public/_base.html" %}
 
 {% block container %}
-    <div class="col">
-        Public :-)
 
-    {% for lab in laboratories %}
-        <div class="card">
-            <div class="card-body">
-                <h5 class="card-title">{{ lab.display_name }}</h5>
-                {% for resource in lab.resources %}
-                {# Show the resource identifier #}
-                    <p class="card-text">{{ resource }}</p>
-                {% endfor %}
-                <p class="card-text"></p>
+    <div class="row">
+
+        <h1 class="text-center mt-5">{{ gettext("Public laboratory list") }}</h1>
+        <p>This page lists the laboratories and resources that are provided by this remote laboratory host.</p>
+
+        {% for lab in laboratories %}
+
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">{{ lab.display_name }}</h5>
+                    <p>{{ lab.description }}</p>
+                    {% for resource in lab.resources %}
+                    {# Show the resource identifier #}
+                        <p class="card-text">{{ resource }}</p>
+                    {% endfor %}
+                    <p class="card-text"></p>
+                </div>
             </div>
-        </div>
-    {% endfor %}
+
+        {% endfor %}
 
     </div>
 

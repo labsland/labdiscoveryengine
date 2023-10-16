@@ -9,6 +9,10 @@
 
 dummy:
   display_name: Dummy Lab # optional
+  description: The Dummy Lab is an example of a laboratory. Here would normally go the description. # optional
+  keywords:
+    - example
+    - dummy
   category: Dummy laboratories # optional
   max_time: 300 # optional, maximum time users can use the lab, in seconds
   image: https://example.com/wherever/is/your/logo.jpg # optional

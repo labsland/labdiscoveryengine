@@ -13,10 +13,17 @@ from labdiscoveryengine.utils import lde_config
 
 login_blueprint = Blueprint('login', __name__)
 
+
 class LoginForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired()])
     password = PasswordField('Password', validators=[DataRequired()])
     remember_me = BooleanField('Remember Me')
+
+
+@login_blueprint.route('/', methods=['GET', 'POST'])
+def index():
+    return render_themed_template('index.html')
+
 
 @login_blueprint.route('/login', methods=['GET', 'POST'])
 def login():

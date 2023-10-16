@@ -3,7 +3,12 @@
 {% block container %}
     <div class="row">
 
-        <div class="col">
+        <div class="col col-md-6 offset-md-3 mt-5">
+
+            <h1 class="mb-5">
+            {{ gettext("Log in") }}
+            </h1>
+
             <form method="POST" action="{{ url_for('.login') }}">
                 {{ form.csrf_token }}
                 <div class="mb-3">
@@ -16,10 +21,6 @@
                 </div>
                 <button type="submit" class="btn btn-primary">{{ gettext("Sign in")}}</button>
             </form>
-        </div>
-
-        <div class="col">
-            Foo bar
         </div>
 
     </div>
