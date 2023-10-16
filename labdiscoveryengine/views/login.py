@@ -45,6 +45,6 @@ def login():
                     session['role'] = 'external'
                     return redirect(url_for('user.index'))
                 
-            form.errors = [ gettext("Invalid username or password") ]
+            form.username.errors.append(gettext("Invalid username or password"))
     
     return render_themed_template('login.html', form=form)
