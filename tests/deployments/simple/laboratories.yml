@@ -15,7 +15,7 @@ dummy:
     - dummy
   category: Dummy laboratories # optional
   max_time: 300 # optional, maximum time users can use the lab, in seconds
-  image: https://example.com/wherever/is/your/logo.jpg # optional
+  image: https://placehold.it/400x400 # optional
   resources: # alternatively you can put them inline: dummy-1, dummy-2
   - dummy-1
   - dummy-2

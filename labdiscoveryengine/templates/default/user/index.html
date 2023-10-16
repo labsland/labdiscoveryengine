@@ -1,22 +1,55 @@
 {% extends "default/user/_base.html" %}
 
 {% block container %}
-    <div class="col">
-        :-)
+<div class="col">
 
-    {% for lab in laboratories %}
+    <div class="accordion" id="labAccordion">
+        {% for lab in laboratories %}
+
         <div class="card">
-            <div class="card-body">
-                <h5 class="card-title">{{ lab.display_name }}</h5>
-                {% for resource in lab.resources %}
-                {# Show the resource identifier #}
-                    <p class="card-text">{{ resource }}</p>
-                {% endfor %}
-                <p class="card-text"></p>
+            <div class="card-header d-flex justify-content-between align-items-center" id="heading{{ loop.index }}">
+                <h2 class="mb-0 flex-grow-1">
+                    <button class="btn btn-link btn-block text-left" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ loop.index }}" aria-expanded="false" aria-controls="collapse{{ loop.index }}">
+                        <img src="{{ lab.image }}" alt="{{ lab.display_name }} Icon" height="40">
+                        {{ lab.display_name }}
+                    </button>
+                </h2>
+                <button class="btn btn-info btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#keywords{{ loop.index }}" aria-expanded="false">Toggle Keywords</button>
+            </div>
+
+            <div id="collapse{{ loop.index }}" class="collapse" aria-labelledby="heading{{ loop.index }}" data-parent="#labAccordion">
+                <div class="card-body">
+                    <p>{{ lab.description }}</p> <!-- Lab Description -->
+                    <a href="#" class="btn btn-primary">Access Lab</a>
+
+                    <!-- Toggle Keywords -->
+                    <div class="collapse" id="keywords{{ loop.index }}">
+                        <hr>
+                        <h5>Keywords:</h5>
+                        <ul>
+                            {% for keyword in lab.keywords %}
+                            <li>{{ keyword }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+
+                    <!-- Show resources -->
+                    <hr>
+                    <h5>Resources:</h5>
+                    <ul class="list-group">
+                        {% for resource in lab.resources %}
+                        <li class="list-group-item">
+                            {{ resource }}
+                            <a href="#" class="btn btn-secondary float-right">Access Resource</a>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
             </div>
         </div>
-    {% endfor %}
 
+        {% endfor %}
     </div>
 
+</div>
 {% endblock %}
