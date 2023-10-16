@@ -10,6 +10,18 @@
     {% block head %}{% endblock %}
   </head>
   <body>
+    <header style="background-color: white; padding: 10px" class="mb-5">
+        <div class="container">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <a href="https://labdiscoveryengine.labsland.com">
+                    <img src="{{ url_for('static', filename='images/labdiscoveryengine.png') }}" alt="LabDiscoveryEngine logo" height="100">
+                </a>
+                <a href="{{ config['INSTITUTION_URL'] }}">
+                    <img src="{{ config['INSTITUTION_LOGO'] }}" alt="{{ config['INSTITUTION_NAME'] }}" height="100">
+                </a>
+            </div>
+        </div>
+    </header>
     {% block body %}
         <div class="container">
             {% block container %}
