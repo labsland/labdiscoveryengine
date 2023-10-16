@@ -2,39 +2,35 @@
 
 {% block container %}
 <div class="col">
-
-    <div class="accordion" id="labAccordion">
+    <div id="labAccordion">
         {% for lab in laboratories %}
-
-        <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center" id="heading{{ loop.index }}">
-                <h2 class="mb-0 flex-grow-1">
-                    <button class="btn btn-link btn-block text-left" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ loop.index }}" aria-expanded="false" aria-controls="collapse{{ loop.index }}">
-                        <img src="{{ lab.image }}" alt="{{ lab.display_name }} Icon" height="40">
-                        {{ lab.display_name }}
-                    </button>
+        <div class="card my-3">
+            <div class="card-header d-flex justify-content-between align-items-center bg-primary text-white" style="box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+                <h2 class="mb-0 flex-grow-1" style="font-size: 1.5em; font-weight: 600;">
+                    <img src="{{ lab.image }}" alt="{{ lab.display_name }} Icon" height="40" style="border: 2px solid white; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                    {{ lab.display_name }}
                 </h2>
-                <button class="btn btn-info btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#keywords{{ loop.index }}" aria-expanded="false">Toggle Keywords</button>
             </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <p class="flex-grow-1">{{ lab.description }}</p> <!-- Lab Description -->
+                    <a href="#" class="btn btn-primary btn-lg align-self-start" style="font-weight: 600; border-radius: 20px;">Access</a>
+                </div>
 
-            <div id="collapse{{ loop.index }}" class="collapse" aria-labelledby="heading{{ loop.index }}" data-parent="#labAccordion">
-                <div class="card-body">
-                    <p>{{ lab.description }}</p> <!-- Lab Description -->
-                    <a href="#" class="btn btn-primary">Access Lab</a>
+                <button class="btn btn-info btn-sm mt-2" type="button" data-bs-toggle="collapse" data-bs-target="#keywords{{ loop.index }}"><i class="fas fa-tags"></i> View Keywords</button>
+                <button class="btn btn-info btn-sm mt-2" type="button" data-bs-toggle="collapse" data-bs-target="#resources{{ loop.index }}"><i class="fas fa-book"></i> View Resources</button>
 
-                    <!-- Toggle Keywords -->
-                    <div class="collapse" id="keywords{{ loop.index }}">
-                        <hr>
-                        <h5>Keywords:</h5>
-                        <ul>
-                            {% for keyword in lab.keywords %}
-                            <li>{{ keyword }}</li>
-                            {% endfor %}
-                        </ul>
-                    </div>
-
-                    <!-- Show resources -->
-                    <hr>
+                <!-- Keywords -->
+                <div class="collapse mt-2" id="keywords{{ loop.index }}">
+                    <h5>Keywords:</h5>
+                    <ul>
+                        {% for keyword in lab.keywords %}
+                        <li>{{ keyword }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                <!-- Resources -->
+                <div class="collapse mt-2" id="resources{{ loop.index }}">
                     <h5>Resources:</h5>
                     <ul class="list-group">
                         {% for resource in lab.resources %}
@@ -47,9 +43,7 @@
                 </div>
             </div>
         </div>
-
         {% endfor %}
     </div>
-
 </div>
 {% endblock %}
