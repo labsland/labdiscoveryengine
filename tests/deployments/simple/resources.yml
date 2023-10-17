@@ -17,3 +17,67 @@ dummy-2:
   login: lde
   password: password
   features: ['feature1', 'feature3']
+
+arch-1:
+  url: http://localhost:5002
+  login: lde
+  password: password
+  features: ['feature1', 'feature3']
+arch-2:
+  url: http://localhost:5003
+  login: lde
+  password: password
+  features: ['feature1', 'feature3']
+
+
+# New resources for Organic Chemistry Lab
+orgchem-1:
+  url: http://localhost:5100
+  login: lde
+  password: password
+  features: ['feature2', 'feature4']
+
+orgchem-2:
+  url: http://localhost:5101
+  login: lde
+  password: password
+  features: ['feature2', 'feature4']
+
+# New resources for Solar System Lab
+solar-1:
+  url: http://localhost:5200
+  login: lde
+  password: password
+  features: ['feature5', 'feature6']
+
+solar-2:
+  url: http://localhost:5201
+  login: lde
+  password: password
+  features: ['feature5', 'feature6']
+
+# New resources for Robotic Arm Lab
+robot-1:
+  url: http://localhost:5300
+  login: lde
+  password: password
+  features: ['feature7', 'feature8']
+
+robot-2:
+  url: http://localhost:5301
+  login: lde
+  password: password
+  features: ['feature7', 'feature8']
+
+# New resources for Quantum Physics Lab
+quant-1:
+  url: http://localhost:5400
+  login: lde
+  password: password
+  features: ['feature9', 'feature10']
+
+quant-2:
+  url: http://localhost:5401
+  login: lde
+  password: password
+  features: ['feature9', 'feature10']
