@@ -1,7 +1,22 @@
 {% extends "default/_base.html" %}
 
 {% block container %}
-    <h1 class="text-center mb-5" style="font-size: 2.5em; font-weight: bold;">Lab Discovery Engine</h1>
+    <h1 class="text-center mb-5" style="font-size: 2.5em; font-weight: bold;">{{ config['INSTITUTION_NAME'] }}'s Lab Discovery Engine</h1>
+
+
+    <!-- Institution Information -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="card text-center">
+                <div class="card-body">
+                    <img src="{{ config['INSTITUTION_LOGO'] }}" alt="{{ config['INSTITUTION_NAME'] }}" height="100" class="mb-3">
+                    <h5 class="card-title">{{ config['INSTITUTION_NAME'] }}</h5>
+                    <p class="card-text">{{ config['INSTITUTION_DESCRIPTION'] }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
 
     <div class="row mb-5">
         <!-- Option 1 -->
