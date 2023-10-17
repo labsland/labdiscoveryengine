@@ -18,16 +18,16 @@
                     <div class="card-body d-flex flex-column">
                         <p class="flex-grow-1" style="font-size: 0.9em;">{{ lab.description }}</p>
                         <div>
-                            <a href="#" class="btn btn-primary btn-sm mb-2" style="font-weight: 600; border-radius: 15px;">Access</a>
+                            <a href="#" class="btn btn-primary btn-sm mb-2" style="font-weight: 600; border-radius: 15px;"><i class="fas fa-arrow-right"></i> Access</a>
                         </div>
                         <div class="mt-2">
-                            <a href="#" class="btn btn-link btn-sm toggle-keywords" data-bs-toggle="collapse" data-bs-target="#keywords{{ loop.index }}"><i class="fas fa-tags"></i> <span>Keywords</span></a>
-                            <a href="#" class="btn btn-link btn-sm toggle-resources" data-bs-toggle="collapse" data-bs-target="#resources{{ loop.index }}"><i class="fas fa-book"></i> <span>Resources</span></a>
+                            <a href="#" class="btn btn-link btn-sm toggle-keywords text-decoration-none" data-bs-toggle="collapse" data-bs-target="#keywords{{ loop.index }}"><i class="fas fa-tags"></i> <span>Keywords</span></a>
+                            <a href="#" class="btn btn-link btn-sm toggle-resources text-decoration-none" data-bs-toggle="collapse" data-bs-target="#resources{{ loop.index }}"><i class="fas fa-book"></i> <span>Resources</span></a>
                         </div>
                     </div>
 
                     <!-- Keywords and Resources -->
-                    <div class="flex-grow-0">
+                    <div class="flex-grow-0 mx-2">
                         <!-- Keywords -->
                         <div class="collapse mt-2" id="keywords{{ loop.index }}">
                             <h5 style="font-size: 0.8em;">Keywords:</h5>
@@ -51,7 +51,7 @@
                                         {% for resource in lab.resources %}
                                         <tr>
                                             <td>{{ resource }}</td>
-                                            <td><a href="#" class="btn btn-secondary btn-sm">Access</a></td>
+                                            <td><a href="#" class="btn btn-secondary btn-sm"><i class="fas fa-download"></i> Access</a></td>
                                         </tr>
                                         {% endfor %}
                                     </tbody>
@@ -64,7 +64,6 @@
         {% endfor %}
     </div>
 </div>
-
 
 <script>
 document.addEventListener("DOMContentLoaded", function() {
