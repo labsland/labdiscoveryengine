@@ -7,6 +7,9 @@
     {% assets 'bootstrap_css' %}
       <link href="{{ ASSET_URL }}" rel="stylesheet">
     {% endassets %}
+    {% assets 'fontawesome_css' %}
+        <link href="{{ ASSET_URL }}" rel="stylesheet">
+    {% endassets %}
     {% block head %}{% endblock %}
   </head>
   <body>
@@ -30,6 +33,10 @@
     {% endblock %}
 
     {% assets 'bootstrap_js' %}
+        <script src="{{ ASSET_URL }}"></script>
+    {% endassets %}
+
+    {% assets 'fontawesome_js' %}
         <script src="{{ ASSET_URL }}"></script>
     {% endassets %}
 
