@@ -13,6 +13,8 @@
     {% block head %}{% endblock %}
   </head>
   <body>
+
+    {% block header %}
     <header style="background-color: white; padding: 10px" class="mb-5">
         <div class="container">
             <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -25,6 +27,8 @@
             </div>
         </div>
     </header>
+    {% endblock %}
+
     {% block body %}
         <div class="container">
             {% block container %}

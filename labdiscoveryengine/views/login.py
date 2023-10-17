@@ -1,4 +1,4 @@
-from flask import Blueprint, redirect, session, url_for, request
+from flask import Blueprint, redirect, session, url_for, request, flash, g
 from flask_babel import gettext
 from flask_wtf import FlaskForm
 
@@ -18,6 +18,16 @@ class LoginForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired()])
     password = PasswordField('Password', validators=[DataRequired()])
     remember_me = BooleanField('Remember Me')
+
+
+class LogoutForm(FlaskForm):
+    pass
+
+
+@login_blueprint.before_request
+def before_request():
+    logout_form = LogoutForm()
+    g.logout_form = logout_form
 
 
 @login_blueprint.route('/', methods=['GET', 'POST'])
@@ -48,3 +58,16 @@ def login():
             form.username.errors.append(gettext("Invalid username or password"))
     
     return render_themed_template('login.html', form=form)
+
+
+@login_blueprint.route('/logout', methods=['POST'])
+def logout():
+    form = LogoutForm()
+    if form.validate_on_submit():
+        session.pop('username', None)
+        session.pop('role', None)
+        flash('You have been logged out.')
+        return redirect(url_for('login.login'))
+    else:
+        flash('Logout failed. CSRF check failed.')
+        return redirect(url_for('user.index'))
