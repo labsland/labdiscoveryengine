@@ -61,7 +61,7 @@ class Laboratory(NamedTuple):
     display_name: str
     description: Optional[str]
     category: Optional[str]
-    keywords: list[str]
+    keywords: List[str]
     max_time: float
     resources: Set[str]
     image: str
