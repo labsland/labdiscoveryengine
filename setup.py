@@ -94,4 +94,3 @@ setup(name='labdiscoveryengine',
         lde=labdiscoveryengine.cli:lde
       '''
 )
-print(requirements)
