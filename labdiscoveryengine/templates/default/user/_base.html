@@ -1,2 +1,20 @@
 {% extends "default/_base.html" %}
 
+{% block header %}
+
+    {{ super() }}
+
+    <!-- Logged-in Header -->
+    <div class="container mb-5">
+        <div class="d-flex justify-content-end align-items-center bg-light p-2">
+            <span class="me-3">Logged in as <strong>{{ username }}</strong></span>
+            <form action="{{ url_for('login.logout') }}" method="post">
+                {{ logout_form.hidden_tag() }}
+                <button type="submit" class="btn btn-outline-secondary btn-sm">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </button>
+            </form>
+        </div>
+    </div>
+
+{% endblock %}

@@ -9,9 +9,84 @@
 
 dummy:
   display_name: Dummy Lab # optional
+  description: The Dummy Lab is an example of a laboratory. Here would normally go the description. # optional
+  keywords:
+    - example
+    - dummy
   category: Dummy laboratories # optional
   max_time: 300 # optional, maximum time users can use the lab, in seconds
-  image: https://example.com/wherever/is/your/logo.jpg # optional
+  image: https://placehold.it/400x400 # optional
   resources: # alternatively you can put them inline: dummy-1, dummy-2
   - dummy-1
   - dummy-2
+
+archimedes:
+  display_name: Archimedes Lab # optional
+  description: The Archimedes lab lets you experiment with buoyancy. # optional
+  keywords:
+    - physics
+    - buoyancy
+    - liquids
+  category: Physics # optional
+  max_time: 300 # optional, maximum time users can use the lab, in seconds
+  image: https://placehold.it/400x400 # optional
+  resources: # alternatively you can put them inline: dummy-1, dummy-2
+  - arch-1
+  - arch-2
+
+organic_chemistry:
+  display_name: Organic Chemistry Lab
+  description: The Organic Chemistry Lab allows students to conduct experiments involving organic molecules and reactions.
+  keywords:
+    - chemistry
+    - organic
+    - reactions
+  category: Chemistry
+  max_time: 600
+  image: https://placehold.it/400x400
+  resources:
+    - orgchem-1
+    - orgchem-2
+
+solar_system:
+  display_name: Solar System Lab
+  description: Explore the solar system and conduct experiments related to planetary motion and celestial mechanics.
+  keywords:
+    - astronomy
+    - solar system
+    - planets
+  category: Astronomy
+  max_time: 500
+  image: https://placehold.it/400x400
+  resources:
+    - solar-1
+    - solar-2
+
+robotic_arm:
+  display_name: Robotic Arm Lab
+  description: This lab allows for the programming and control of a robotic arm to perform tasks like lifting, assembly, and manipulation.
+  keywords:
+    - robotics
+    - engineering
+    - programming
+  category: Engineering
+  max_time: 400
+  image: https://placehold.it/400x400
+  resources:
+    - robot-1
+    - robot-2
+
+
+quantum_physics:
+  display_name: Quantum Physics Lab
+  description: The Quantum Physics Lab allows students to explore the properties of quantum particles and systems.
+  keywords:
+    - physics
+    - quantum
+    - particles
+  category: Advanced Physics
+  max_time: 700
+  image: https://placehold.it/400x400
+  resources:
+    - quant-1
+    - quant-2

@@ -1,0 +1,65 @@
+{% extends "default/_base.html" %}
+
+{% block container %}
+    <h1 class="text-center mb-5" style="font-size: 2.5em; font-weight: bold;">{{ config['INSTITUTION_NAME'] }}'s Lab Discovery Engine</h1>
+
+
+    <!-- Institution Information -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="card text-center">
+                <div class="card-body">
+                    <img src="{{ config['INSTITUTION_LOGO'] }}" alt="{{ config['INSTITUTION_NAME'] }}" height="100" class="mb-3">
+                    <h5 class="card-title">{{ config['INSTITUTION_NAME'] }}</h5>
+                    <p class="card-text">{{ config['INSTITUTION_DESCRIPTION'] }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="row mb-5">
+        <!-- Option 1 -->
+        <div class="col-md-6 mb-5">
+            <div class="card text-center" style="padding: 20px;">
+                <div class="card-header">
+                    <i class="fas fa-rocket fa-2x"></i>
+                </div>
+                <div class="card-body">
+                    <h5 class="card-title">Learn about LabDiscoveryEngine</h5>
+                    <p class="card-text">Explore the main website to find out more about Lab Discovery Engine.</p>
+                    <a href="https://labdiscoveryengine.labsland.com" class="btn btn-secondary">Learn More</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Option 2 -->
+        <div class="col-md-6 mb-5">
+            <div class="card text-center" style="padding: 20px;">
+                <div class="card-header">
+                    <i class="fas fa-user-lock fa-2x"></i>
+                </div>
+                <div class="card-body">
+                    <h5 class="card-title">Access Laboratories</h5>
+                    <p class="card-text">Login to access the labs provided by this LabDiscoveryEngine instance.</p>
+                    <a href="{{ url_for('login.login') }}" class="btn btn-primary">Login</a>
+                </div>
+            </div>
+        </div>
+
+            <!-- Public Laboratories -->
+        <div class="col-12 mb-5">
+            <div class="card text-center" style="padding: 20px;">
+                <div class="card-header">
+                    <i class="fas fa-flask fa-2x"></i>
+                </div>
+                <div class="card-body">
+                    <h5 class="card-title">Published Laboratories List</h5>
+                    <p class="card-text">Explore the labs offered by this instance.</p>
+                    <a href="{{ url_for('public.index') }}" class="btn btn-info">View Labs</a>
+                </div>
+            </div>
+        </div>
+
+    </div>
+{% endblock %}

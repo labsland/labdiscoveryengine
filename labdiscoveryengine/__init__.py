@@ -18,6 +18,7 @@ if DebugToolbarExtension is not None:
 else:
     toolbar = None
 
+
 def create_app(config_name: Optional[str] = None):
     if config_name is None:
         config_name = 'default'
@@ -63,6 +64,7 @@ def create_app(config_name: Optional[str] = None):
     return app
 
 SUPPORTED_TRANSLATIONS = None
+
 
 def get_locale():
     """ Defines what's the current language for the user. It uses different approaches. """

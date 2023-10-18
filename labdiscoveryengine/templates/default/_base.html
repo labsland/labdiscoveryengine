@@ -1,26 +1,112 @@
 <!doctype html>
 <html lang="{{ language }}">
-  <head>
+<head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ title }}</title>
     {% assets 'bootstrap_css' %}
-      <link href="{{ ASSET_URL }}" rel="stylesheet">
+        <link href="{{ ASSET_URL }}" rel="stylesheet">
+    {% endassets %}
+    {% assets 'fontawesome_css' %}
+        <link href="{{ ASSET_URL }}" rel="stylesheet">
     {% endassets %}
     {% block head %}{% endblock %}
-  </head>
-  <body>
-    {% block body %}
+</head>
+<body>
+
+<style>
+    /* Make sure the footer sticks to the bottom */
+    body {
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+    }
+
+    .container {
+        flex: 1;
+    }
+
+    .footer {
+        background-color: #333;
+        color: white;
+        padding: 20px 0;
+        text-align: center;
+        position: relative;
+    }
+
+    .footer .copyright {
+        font-size: 16px;
+        font-weight: bold;
+        margin-bottom: 10px;
+    }
+
+    .footer .funding-info {
+        font-size: 12px;
+    }
+
+    .footer .logos {
+        display: flex;
+        justify-content: center;
+    }
+
+    .footer img {
+        height: 30px;
+        margin: 0 10px;
+    }
+</style>
+
+{% block header %}
+    <header style="background-color: white; padding: 10px" class="mb-5">
         <div class="container">
-            {% block container %}
-            {% endblock %}
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <a href="https://labdiscoveryengine.labsland.com">
+                    <img src="{{ url_for('static', filename='images/labdiscoveryengine.png') }}"
+                         alt="LabDiscoveryEngine logo" height="100">
+                </a>
+                <a href="{{ config['INSTITUTION_URL'] }}">
+                    <img src="{{ config['INSTITUTION_LOGO'] }}" alt="{{ config['INSTITUTION_NAME'] }}" height="100">
+                </a>
+            </div>
         </div>
-    {% endblock %}
+    </header>
+{% endblock %}
 
-    {% assets 'bootstrap_js' %}
-      <link href="{{ ASSET_URL }}" rel="stylesheet">
-    {% endassets %}
+{% block body %}
+    <div class="container">
+        {% block container %}
+        {% endblock %}
+    </div>
+{% endblock %}
 
-    {% block tail %}{% endblock %}
-  </body>
+{% block footer %}
+    <footer class="footer mt-5">
+        <div class="container">
+            <div class="copyright">
+                Copyright &copy; LabDiscoveryEngine Team
+            </div>
+            <div class="logos mt-1">
+                <img style="margin-left: 70px" class="mh-2" src="{{ url_for('static', filename='images/eu-logo.jpg') }}" alt="EU Logo">
+                <img style="padding-left: 100px" src="{{ url_for('static', filename='images/ngi-search-logo.png') }}" alt="NGI Search Logo">
+            </div>
+            <div class="funding-info">
+                Funded by the European Union. Views and opinions expressed are however those of the author(s) only and
+                do not necessarily reflect those of the European Union or European Commission. Neither the European
+                Union nor the granting authority can be held responsible for them. Funded within the framework of the
+                NGI Search project under grant agreement No 101069364.
+            </div>
+        </div>
+    </footer>
+
+{% endblock %}
+
+{% assets 'bootstrap_js' %}
+    <script src="{{ ASSET_URL }}"></script>
+{% endassets %}
+
+{% assets 'fontawesome_js' %}
+    <script src="{{ ASSET_URL }}"></script>
+{% endassets %}
+
+{% block tail %}{% endblock %}
+</body>
 </html>

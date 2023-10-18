@@ -23,3 +23,19 @@ def register_bundles(assets: Environment):
 
     assets.register('bootstrap_css', bootstrap_css)
     assets.register('bootstrap_js', bootstrap_js)
+
+
+    fontawesome_css = Bundle(
+            'node_modules/@fortawesome/fontawesome-free/css/all.min.css',
+            filters=CSS_FILTER,
+            output="gen/fontawesome/css/all.%(version)s.min.css")
+
+    fontawesome_js = Bundle(
+            'node_modules/@fortawesome/fontawesome-free/js/all.min.js',
+            filters=JS_FILTER,
+            output="gen/fontawesome/js/all.%(version)s.min.js")
+
+    assets.register('fontawesome_css', fontawesome_css)
+    assets.register('fontawesome_js', fontawesome_js)
+
+

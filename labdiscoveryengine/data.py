@@ -50,6 +50,7 @@ class Resource(NamedTuple):
     password: str
     features: List[str]
 
+
 class Laboratory(NamedTuple):
     """
     A laboratory is the standard way to access the remote laboratory. It has other fields
@@ -58,7 +59,9 @@ class Laboratory(NamedTuple):
     """
     identifier: str
     display_name: str
+    description: Optional[str]
     category: Optional[str]
+    keywords: list[str]
     max_time: float
     resources: Set[str]
     image: str
