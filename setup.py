@@ -81,7 +81,7 @@ setup(name='labdiscoveryengine',
       author_email='dev@labsland.com',
       url='https://developers.labsland.com/labdiscoveryengine/',
       license=cp_license,
-      packages=find_packages(),
+      packages=find_packages(exclude=['tests**']),
       install_requires=requirements,
       include_package_data=True,
       cmdclass={
