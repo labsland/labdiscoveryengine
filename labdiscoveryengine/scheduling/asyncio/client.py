@@ -14,6 +14,9 @@ class GenericResourceClient:
 
     def __init__(self, resource: Resource):
         self.resource = resource
+        self.base_url = resource.url
+        if self.base_url.endswith('/'):
+            self.base_url = self.base_url[:-1]
         self.resource_keys = ResourceKeys(resource.identifier)
         self.auth = aiohttp.BasicAuth(resource.login, resource.password)
         self.client_session: Optional[aiohttp.ClientSession] = aiohttp.ClientSession(auth=self.auth)
@@ -56,7 +59,7 @@ class LabDiscoveryLibResourceClient(GenericResourceClient):
     HTTP Client wrapper of the LDL client
     """
     def _get_url(self, path: str):
-        return f"{self.resource.url}ldl{path}"
+        return f"{self.resource.url}/ldl{path}"
     
     def _get_start_body(self, reservation_request: ReservationRequest) -> dict:
         return {
@@ -82,7 +85,7 @@ class WebLabLibResourceClient(GenericResourceClient):
     HTTP Client wrapper of the weblablib client
     """
     def _get_url(self, path: str):
-        return f"{self.resource.url}weblab{path}"
+        return f"{self.resource.url}/weblab{path}"
 
     def _get_start_body(self, reservation_request: ReservationRequest) -> dict:
         return {

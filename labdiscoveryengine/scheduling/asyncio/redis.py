@@ -1,9 +1,57 @@
+import asyncio
 from typing import Dict, List, Optional
+from functools import wraps
+
 from flask import current_app
 from redis.asyncio.client import Redis
 
-aioredis_store: Optional[Redis] = None
+class AsyncioRedisStore:
+    def __init__(self):
+        self._redis = None
+        self._method_cache = {}
 
+    def initialize_aioredis_store(self, redis_obj: Redis):
+        self._redis = redis_obj
+
+    def _create_sync_wrapper(self, attr):
+        @wraps(attr)
+        def sync_method(*args, **kwargs):
+            if self._redis is None:
+                raise Exception("Redis store is not initialized")
+            return attr(*args, **kwargs)
+        return sync_method
+
+    def _create_async_wrapper(self, attr):
+        @wraps(attr)
+        async def async_method(*args, **kwargs):
+            if self._redis is None:
+                raise Exception("Redis store is not initialized")
+            return await attr(*args, **kwargs)
+        return async_method
+
+    def __getattr__(self, name):
+        if self._redis is None:
+            raise Exception("Redis store is not initialized")
+
+        # Check the cache first
+        if name in self._method_cache:
+            return self._method_cache[name]
+
+        # Get the attribute from the Redis instance
+        attr = getattr(self._redis, name)
+
+        # Create and cache the appropriate wrapper
+        if asyncio.iscoroutinefunction(attr):
+            wrapper = self._create_async_wrapper(attr)
+        elif callable(attr):
+            wrapper = self._create_sync_wrapper(attr)
+        else:
+            wrapper = attr
+
+        self._method_cache[name] = wrapper
+        return wrapper
+    
+aioredis_store: Redis = AsyncioRedisStore()
 
 async def is_redis_flushed():
     """
@@ -14,8 +62,9 @@ async def is_redis_flushed():
     return await aioredis_store.get('lde:running') != 'true'
 
 async def initialize_redis():
-    global aioredis_store
-    aioredis_store = await Redis.from_url(current_app.config['REDIS_URL'], decode_responses=True)
+    redis_obj = await Redis.from_url(current_app.config['REDIS_URL'], decode_responses=True)
+    aioredis_store.initialize_aioredis_store(redis_obj)
+
     await aioredis_store.set("lde:running", "true")
     await lua_scripts.initialize_asyncio_lua_scripts()
 
@@ -68,4 +117,4 @@ class LuaScripts:
         """
         return await self._run_lua_script(ScriptNames.assign_reservation_to_resource, args=[resource_name])
 
-lua_scripts = LuaScripts()    
+lua_scripts = LuaScripts()

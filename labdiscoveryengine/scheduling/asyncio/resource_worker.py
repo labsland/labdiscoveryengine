@@ -8,7 +8,7 @@ import logging
 from typing import Optional
 from labdiscoveryengine.data import Resource
 from labdiscoveryengine.scheduling.asyncio.processor import ResourceReservationProcessor
-from labdiscoveryengine.scheduling.asyncio.redis import initialize_redis
+from labdiscoveryengine.scheduling.asyncio.redis import initialize_redis, aioredis_store
 
 from labdiscoveryengine.scheduling.keys import ResourceKeys
 
@@ -53,8 +53,6 @@ class ResourceWorker:
         self.minimum_time_between_checks = 10 # seconds
 
     async def run(self):
-        from labdiscoveryengine.scheduling.asyncio.redis import aioredis_store
-
         pubsub = aioredis_store.pubsub()
 
         channel_name = ResourceKeys(self.resource_name).channel()
@@ -63,7 +61,7 @@ class ResourceWorker:
         try:
             await pubsub.subscribe(channel_name)
 
-            # TODO: retrieve existing reservations (e.g., in a restart process)
+            # Retrieve existing reservations (e.g., in a restart process)
             await self.process_unfinished_reservation()
 
             # Process any reservation in case there were reservations before we subscribed...
@@ -101,9 +99,10 @@ class ResourceWorker:
         """
         Check if a reservation was being processed before (maybe we restarted or similar),
         and take it from where we left it
-        """
+        """        
         logger.info(f"[{self.resource.identifier}] Searching for an unfinished reservations...")
         # TODO: search for an unfinished reservation and call process_reservation
+        reservation_id = await aioredis_store.get(ResourceKeys(self.resource_name).assigned())
 
     async def process_all_existing_reservations(self):
         """

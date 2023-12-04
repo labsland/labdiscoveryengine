@@ -44,5 +44,8 @@ class ResourceKeys:
     def channel(self) -> str:
         return f"{self.base()}:channel"
     
+    def assigned(self) -> str:
+        return f"{self.base()}:assigned"
+    
     def base(self) -> str:
         return f"{Keys.base()}:resources:{self.resource_id}"

@@ -9,6 +9,7 @@ logger = logging.getLogger(__name__)
 from labdiscoveryengine.data import Resource
 from labdiscoveryengine.scheduling.asyncio.client import GenericResourceClient, LabDiscoveryLibResourceClient, WebLabLibResourceClient
 from labdiscoveryengine.scheduling.keys import ReservationKeys, ResourceKeys
+from labdiscoveryengine.scheduling.asyncio.redis import aioredis_store
 
 class ResourceReservationProcessor:
     """
@@ -40,8 +41,6 @@ class ResourceReservationProcessor:
         """
         Process the reservations
         """
-        from labdiscoveryengine.scheduling.asyncio.redis import aioredis_store
-        
         logger.info(f"[{self.resource.identifier}] Starting to process reservation: {self.reservation_id}")
 
         status: Optional[str] = await aioredis_store.hget(self.reservation_keys.base(), ReservationKeys.parameters.status)
@@ -49,7 +48,7 @@ class ResourceReservationProcessor:
 
         if status is None or metadata_str is None:
             logger.error(f"[{self.resource.identifier}] Error: reservation {self.reservation_id} not found")
-            return
+            return await self.fail()
 
         metadata = json.loads(metadata_str)
 
@@ -69,9 +68,8 @@ class ResourceReservationProcessor:
                 try:
                     url, session_id = await client.start(reservation_request)
                 except Exception as err:
-                    pass
-                    # TODO
-                    return
-                else:
-                    pass
+                    logger.error(f"[{self.resource.identifier}] Error: failed to start reservation {self.reservation_id}: {err}", exc_info=True)
+                    return await self.fail()
+                
+                # Continue...
 
