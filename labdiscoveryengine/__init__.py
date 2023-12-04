@@ -1,10 +1,13 @@
 import os
+import sys
 from typing import Optional
 from flask import Flask, has_request_context, request, session
 
 import yaml
 from flask_babel import Babel
 from flask_assets import Environment, Bundle
+
+from labdiscoveryengine.scheduling.sync.web_api import initialize_web
 
 try:
     from flask_debugtoolbar import DebugToolbarExtension
@@ -18,6 +21,22 @@ if DebugToolbarExtension is not None:
 else:
     toolbar = None
 
+def running_mode() -> str:
+    """
+    Return 'web' or 'worker' depending of it is running in web mode (e.g., 
+    "flask run" or in gunicorn) or in worker mode (calling "flask worker run")
+    """
+    if os.environ.get('LDE_RUNNING_MODE') == 'worker':
+        return 'worker'
+    
+    if len(sys.argv) < 2:
+        return 'web'    
+    
+    for pos, arg in enumerate(sys.argv[:-1]):
+        if arg == 'worker' and sys.argv[pos + 1] == 'run':
+            return 'worker'
+    
+    return 'web'
 
 def create_app(config_name: Optional[str] = None):
     if config_name is None:
@@ -60,6 +79,9 @@ def create_app(config_name: Optional[str] = None):
     app.register_blueprint(user_blueprint, url_prefix='/user')
     app.register_blueprint(external_v1_blueprint, url_prefix='/external/v1')
     app.register_blueprint(public_blueprint, url_prefix='/public')
+
+    if running_mode() == 'web':
+        initialize_web(app)
 
     return app
 

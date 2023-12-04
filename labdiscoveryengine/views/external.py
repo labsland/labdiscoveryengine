@@ -2,7 +2,7 @@ import secrets
 from typing import List, Optional
 from flask import Blueprint, jsonify, g, request
 from labdiscoveryengine.scheduling.data import ReservationRequest
-from labdiscoveryengine.scheduling.web_api import add_reservation
+from labdiscoveryengine.scheduling.sync.web_api import add_reservation
 
 from labdiscoveryengine.utils import lde_config
 
@@ -64,6 +64,10 @@ def reservations():
             if not isinstance(resource, str):
                 return jsonify(success=False, code='invalid-request', message=f'Invalid resource (must be string): {resource}'), 400
             
+        if not resources:
+            # If it adds no resources, it means that all resources are valid
+            resources = list(lde_config.laboratories[laboratory].resources)
+
         user_identifier = request_data.get('userIdentifier')
         if not user_identifier:
             return jsonify(success=False, code='invalid-request', message='Missing userIdentifier'), 400
@@ -83,7 +87,7 @@ def reservations():
             identifier=secrets.token_urlsafe(),
             laboratory=laboratory,
             resources=resources,
-            feature=features,
+            features=features,
             external_user_identifier=user_identifier,
             user_identifier=g.external_username, 
             user_role='external'

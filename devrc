@@ -1,3 +1,4 @@
 export FLASK_DEBUG=1
+export FLASK_CONFIG=development
 export FLASK_APP=autoapp
 export FLASK_RUN_WITH_THREADS=1

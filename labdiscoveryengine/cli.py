@@ -1,3 +1,4 @@
+import datetime
 import os
 import sys
 import time
@@ -6,6 +7,7 @@ import pathlib
 import functools
 import multiprocessing
 import asyncio
+import logging
 
 from typing import Callable, Dict, Optional
 
@@ -15,7 +17,7 @@ import labdiscoveryengine
 from labdiscoveryengine import create_app
 from labdiscoveryengine.configuration.exc import InvalidUsernameConfigurationError
 from labdiscoveryengine.configuration.storage import change_credentials_password, create_admin_user, create_deployment_folder, create_external_user as storage_create_external_user, list_users, check_credentials_password
-from labdiscoveryengine.scheduling.runner import main as runner_main
+from labdiscoveryengine.scheduling.asyncio.runner import main as runner_main
 
 def with_app(func: Callable):
     """
@@ -519,8 +521,11 @@ def worker_run():
     """
     Run the worker
     """
-    print(f"[{time.asctime()}] Starting worker...", flush=True)
-    print(f"[{time.asctime()}] Starting worker...", file=sys.stderr, flush=True)
+    logging.basicConfig(level=logging.INFO, format='[%(asctime)s][%(levelname)s] %(message)s')
+
+    formatted_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S,%f")[:-3]
+    print(f"[{formatted_time}] Starting worker...", flush=True)
+    print(f"[{formatted_time}] Starting worker...", file=sys.stderr, flush=True)
 
     asyncio.run(runner_main())
 

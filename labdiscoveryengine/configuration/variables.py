@@ -9,6 +9,8 @@ class Config:
     THEME: str = os.environ.get('THEME') or 'default'
     SECRET_KEY: str = os.environ.get('SECRET_KEY') or 'secret'
 
+    REDIS_URL: str = os.environ.get('REDIS_URL') or 'redis://localhost:6379/0'
+
     DEFAULT_MAX_TIME: float = float(os.environ.get('DEFAULT_MAX_TIME') or '300')
     DEFAULT_RESOURCE_LOGIN: Optional[str] = os.environ.get('DEFAULT_RESOURCE_LOGIN')
     DEFAULT_RESOURCE_PASSWORD: Optional[str] = os.environ.get('DEFAULT_RESOURCE_PASSWORD')
