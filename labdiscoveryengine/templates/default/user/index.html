@@ -20,7 +20,7 @@
                     <div class="card-body d-flex flex-column">
                         <p class="flex-grow-1" style="font-size: 0.9em;">{{ lab.description }}</p>
                         <div>
-                            <button data-laboratory="{{ lab.identifier }}" class="btn btn-primary btn-sm mb-2 access-btn lab-access-btn" style="font-weight: 600; border-radius: 15px;"><i class="fas fa-arrow-right"></i> {{ gettext("Access") }}</button>
+                            <button data-laboratory="{{ lab.identifier }}" class="btn btn-primary btn-sm mb-2 access-btn lab-access-btn" style="font-weight: 600; border-radius: 15px;"><i class="fas fa-arrow-right icon-normal"></i><i class="fas fa-spin fa-spinner icon-spin" style="display: none"></i> <span>{{ gettext("Access") }}</span></button>
                             <span id="message-lab-{{ lab.identifier }}" class=""></span>
                         </div>
                         <div class="mt-2">
@@ -67,7 +67,7 @@
                                                     {{ gettext("No feature") }}
                                                 {% endif %}
                                             </td>
-                                            <td><button data-laboratory="{{ lab.identifier }}" data-resource="{{ resource }}" class="btn btn-secondary btn-sm access-btn resource-access-btn"><i class="fas fa-download"></i> {{ gettext("Access") }}</button></td>
+                                            <td><button data-laboratory="{{ lab.identifier }}" data-resource="{{ resource }}" class="btn btn-secondary btn-sm access-btn resource-access-btn"><i class="fas fa-download"></i> <span>{{ gettext("Access") }}</span></button></td>
                                         </tr>
                                         {% endfor %}
                                     </tbody>
@@ -96,7 +96,7 @@
 
 {% block tail %}
 <script>
-    var ACCESSING_MESSAGE = {{ gettext("Accessing...")|tojson }};
+    var ACCESSING_MESSAGE = {{ gettext("Accessing")|tojson }};
     var RESERVE_STARTING_MESSAGE = {{ gettext("Starting reserve process...")|tojson }};
     var RESERVE_WAITING_MESSAGE = {{ gettext("Waiting to be ready...")|tojson }};
     var RESERVE_FINISHED_MESSAGE = {{ gettext("Reservation finished...")|tojson }};  // TO-DO: What is this state?
@@ -189,8 +189,14 @@
     $(document).ready(function () {
     
         $(".access-btn").click(function () {
+
             $(".access-btn").attr("disabled", "disabled");
-            $(this).text(ACCESSING_MESSAGE);
+
+            // Change the button for an Accessing message with a spinner.
+            $(this).find("span").text(ACCESSING_MESSAGE);
+
+            $(this).find(".icon-normal").hide();
+            $(this).find(".icon-spin").show();
 
             var laboratory = $(this).data("laboratory");
             var resource = $(this).data("resource");
