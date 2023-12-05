@@ -21,7 +21,7 @@
                         <p class="flex-grow-1" style="font-size: 0.9em;">{{ lab.description }}</p>
                         <div>
                             <button data-laboratory="{{ lab.identifier }}" class="btn btn-primary btn-sm mb-2 access-btn lab-access-btn" style="font-weight: 600; border-radius: 15px;"><i class="fas fa-arrow-right icon-normal"></i><i class="fas fa-spin fa-spinner icon-spin" style="display: none"></i> <span>{{ gettext("Access") }}</span></button>
-                            <span id="message-lab-{{ lab.identifier }}" class=""></span>
+                            <p id="message-lab-{{ lab.identifier }}" class="" style="font-size: 0.9em"></p>
                         </div>
                         <div class="mt-2">
                             <a href="#" class="btn btn-link btn-sm toggle-keywords text-decoration-none" data-bs-toggle="collapse" data-bs-target="#keywords{{ loop.index }}"><i class="fas fa-tags"></i> <span>{{ gettext("Keywords") }}</span></a>
@@ -67,7 +67,7 @@
                                                     {{ gettext("No feature") }}
                                                 {% endif %}
                                             </td>
-                                            <td><button data-laboratory="{{ lab.identifier }}" data-resource="{{ resource }}" class="btn btn-secondary btn-sm access-btn resource-access-btn"><i class="fas fa-download"></i> <span>{{ gettext("Access") }}</span></button></td>
+                                            <td><button data-laboratory="{{ lab.identifier }}" data-resource="{{ resource }}" class="btn btn-secondary btn-sm access-btn resource-access-btn"><i class="fas fa-download icon-normal"></i><i class="fas fa-spin fa-spinner icon-spin" style="display: none"></i> <span>{{ gettext("Access") }}</span></button></td>
                                         </tr>
                                         {% endfor %}
                                     </tbody>
