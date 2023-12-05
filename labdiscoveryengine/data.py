@@ -68,3 +68,4 @@ class Laboratory(NamedTuple):
     max_time: float
     resources: Set[str]
     image: str
+    features: Set[str]

@@ -14,6 +14,8 @@ from labdiscoveryengine.scheduling.keys import ReservationKeys, UserKeys
 from ..data import ReservationRequest, ReservationStatus
 from ..redis_scripts import ScriptNames, SCRIPT_FILES
 
+from labdiscoveryengine.utils import lde_config
+
 redis_store = FlaskRedis(decode_responses=True)
 
 
@@ -86,6 +88,21 @@ def initialize_web(app: Flask):
     
 
 def add_reservation(reservation_request: ReservationRequest) -> ReservationStatus:
+    if reservation_request.features:
+        resources_to_remove = []
+        for resource_name in reservation_request.resources:
+            resource = lde_config.resources.get(resource_name)
+            if not resource:
+                resources_to_remove.append(resource_name)
+
+            for feature in reservation_request.features:
+                if feature not in resource.features:
+                    resources_to_remove.append(resource_name)
+                    break
+
+        for resource_name in resources_to_remove:
+            reservation_request.resources.remove(resource_name)
+
     sync_lua_scripts.store_reservation(reservation_request)
     return sync_lua_scripts.get_reservation_status(reservation_request.identifier)
 

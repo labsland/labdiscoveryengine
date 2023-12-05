@@ -38,4 +38,11 @@ def register_bundles(assets: Environment):
     assets.register('fontawesome_css', fontawesome_css)
     assets.register('fontawesome_js', fontawesome_js)
 
+    vendor_js = Bundle(
+            "node_modules/jquery/dist/jquery.min.js",
+            filters=JS_FILTER,
+            output="gen/vendor.%(version)s.min.js")
+
+    assets.register('vendor_js', vendor_js)
+
 

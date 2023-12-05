@@ -14,7 +14,9 @@ The official website of the LabDiscoveryEngine project is https://labdiscoveryen
 
 ### Installation
 
+```
 $ pip install labdiscoveryengine
+```
 
 ### Creating an LDE deployment
 
@@ -49,3 +51,23 @@ Funded by the European Union. Views and opinions expressed are however those of 
 
 ![EU Flag](https://lh5.googleusercontent.com/iLFDSNFpXCVSo89LlHyxwfp5OHV1Wk63KLXJxd-zZcd4Cr5kGGMoDivRN9SETLSyJpWxIprU07VWO39DIjsY6lg5D5sEJv15c_C7GyWmuZjo24DJBD0Cmwy95pYbuiRREQ=w1280)
 
+
+## Development
+
+When developing LabDiscoveryEngine (not a remote laboratory, but when developing the RLMS itself), the easiest steps are:
+
+
+* Start the web server in debug mode:
+```
+$ . devrc
+$ flask run
+```
+
+* Start the worker:
+```
+$ python labdiscoveryengine/cli.py worker run
+```
+
+(this is the equivalent to running ```lde worker run``` when the labdiscoveryengine package is installed)
+
+* In the folder tools there are scripts to test.

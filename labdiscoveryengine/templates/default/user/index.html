@@ -7,6 +7,7 @@
     <div id="labAccordion" class="row d-flex flex-wrap">
         {% for lab in laboratories %}
             <div class="col-md-4 col-sm-6 mb-4">
+                <a name="lab-{{ lab.identifier }}"></a>
                 <!-- Add d-flex and flex-column on card -->
                 <div class="card h-100 d-flex flex-column">
                     <div class="card-header bg-primary text-white" style="box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
@@ -19,11 +20,13 @@
                     <div class="card-body d-flex flex-column">
                         <p class="flex-grow-1" style="font-size: 0.9em;">{{ lab.description }}</p>
                         <div>
-                            <a href="#" class="btn btn-primary btn-sm mb-2" style="font-weight: 600; border-radius: 15px;"><i class="fas fa-arrow-right"></i> Access</a>
+                            <button data-laboratory="{{ lab.identifier }}" class="btn btn-primary btn-sm mb-2 access-btn lab-access-btn" style="font-weight: 600; border-radius: 15px;"><i class="fas fa-arrow-right"></i> {{ gettext("Access") }}</button>
+                            <span id="message-lab-{{ lab.identifier }}" class=""></span>
                         </div>
                         <div class="mt-2">
-                            <a href="#" class="btn btn-link btn-sm toggle-keywords text-decoration-none" data-bs-toggle="collapse" data-bs-target="#keywords{{ loop.index }}"><i class="fas fa-tags"></i> <span>Keywords</span></a>
-                            <a href="#" class="btn btn-link btn-sm toggle-resources text-decoration-none" data-bs-toggle="collapse" data-bs-target="#resources{{ loop.index }}"><i class="fas fa-book"></i> <span>Resources</span></a>
+                            <a href="#" class="btn btn-link btn-sm toggle-keywords text-decoration-none" data-bs-toggle="collapse" data-bs-target="#keywords{{ loop.index }}"><i class="fas fa-tags"></i> <span>{{ gettext("Keywords") }}</span></a>
+                            <a href="#" class="btn btn-link btn-sm toggle-resources text-decoration-none" data-bs-toggle="collapse" data-bs-target="#resources{{ loop.index }}"><i class="fas fa-book"></i> <span>{{ gettext("Resources") }}</span></a>
+                            <a href="#" class="btn btn-link btn-sm toggle-features text-decoration-none" data-bs-toggle="collapse" data-bs-target="#features{{ loop.index }}"><i class="fas fa-book"></i> <span>{{ gettext("Features") }}</span></a>
                         </div>
                     </div>
 
@@ -31,33 +34,57 @@
                     <div class="flex-grow-0 mx-2">
                         <!-- Keywords -->
                         <div class="collapse mt-2" id="keywords{{ loop.index }}">
-                            <h5 style="font-size: 0.8em;">Keywords:</h5>
+                            <h5 style="font-size: 0.8em;">{{ gettext("Keywords:") }}</h5>
                             <ul>
-                                {% for keyword in lab.keywords %}
+                                {% for keyword in lab.keywords|sort %}
                                 <li>{{ keyword }}</li>
                                 {% endfor %}
                             </ul>
                         </div>
+
                         <!-- Resources -->
                         <div class="collapse mt-2" id="resources{{ loop.index }}">
                             <div class="table-responsive">
                                 <table class="table table-sm">
                                     <thead>
                                         <tr>
-                                            <th>Resource</th>
-                                            <th>Access</th>
+                                            <th>{{ gettext("Resource") }}</th>
+                                            <th>{{ gettext("Features") }}</th>
+                                            <th>{{ gettext("Access") }}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {% for resource in lab.resources %}
+                                        {% for resource in lab.resources|sort %}
                                         <tr>
                                             <td>{{ resource }}</td>
-                                            <td><a href="#" class="btn btn-secondary btn-sm"><i class="fas fa-download"></i> Access</a></td>
+                                            <td>
+                                                {% if resources[resource].features %}
+                                                    {%- for feature in resources[resource].features|sort -%}
+                                                        {{ feature }}
+                                                        {%- if not loop.last %}, {% endif -%}
+                                                    {%- endfor -%}
+                                                    {% else %}
+                                                    {{ gettext("No feature") }}
+                                                {% endif %}
+                                            </td>
+                                            <td><button data-laboratory="{{ lab.identifier }}" data-resource="{{ resource }}" class="btn btn-secondary btn-sm access-btn resource-access-btn"><i class="fas fa-download"></i> {{ gettext("Access") }}</button></td>
                                         </tr>
                                         {% endfor %}
                                     </tbody>
                                 </table>
                             </div>
+                        </div>
+
+                        <!-- Features -->
+                        <div class="collapse mt-2" id="features{{ loop.index }}">
+                            <h5 style="font-size: 0.8em;">{{ gettext("Features:") }}</h5>
+                            
+                            {% for feature in lab.features|sort %}
+                            <div class="form-check form-check-inline">
+                                <input data-feature="{{ feature }}" class="form-check-input" id="feature-{{ lab.identifier }}-{{ feature }}" name="features-{{ lab.identifier }}" type="checkbox">
+                                <label class="form-check-label" for="feature-{{ lab.identifier }}-{{ feature }}">{{ feature }}</label>
+                            </div>
+                            {% endfor %}
                         </div>
                     </div>
                 </div>
@@ -65,40 +92,130 @@
         {% endfor %}
     </div>
 </div>
+{% endblock %}
+
+{% block tail %}
+<script>
+    var ACCESSING_MESSAGE = {{ gettext("Accessing...")|tojson }};
+    var API_URL = {{ url_for(".api")|tojson }};
+</script>
 
 <script>
-document.addEventListener("DOMContentLoaded", function() {
-  var keywordLinks = document.querySelectorAll('.toggle-keywords');
-  var resourceLinks = document.querySelectorAll('.toggle-resources');
-
-  keywordLinks.forEach(function(link) {
-    var collapseElementId = link.getAttribute("data-bs-target");
-    var collapseElement = document.querySelector(collapseElementId);
-    var textElement = link.querySelector('span');
-
-    collapseElement.addEventListener('show.bs.collapse', function () {
-      textElement.textContent = 'Hide Keywords';
+    document.addEventListener("DOMContentLoaded", function() {
+      var keywordLinks = document.querySelectorAll('.toggle-keywords');
+      var resourceLinks = document.querySelectorAll('.toggle-resources');
+    
+      keywordLinks.forEach(function(link) {
+        var collapseElementId = link.getAttribute("data-bs-target");
+        var collapseElement = document.querySelector(collapseElementId);
+        var textElement = link.querySelector('span');
+    
+        collapseElement.addEventListener('show.bs.collapse', function () {
+          textElement.textContent = 'Hide Keywords';
+        });
+    
+        collapseElement.addEventListener('hide.bs.collapse', function () {
+          textElement.textContent = 'Keywords';
+        });
+      });
+    
+      resourceLinks.forEach(function(link) {
+        var collapseElementId = link.getAttribute("data-bs-target");
+        var collapseElement = document.querySelector(collapseElementId);
+        var textElement = link.querySelector('span');
+    
+        collapseElement.addEventListener('show.bs.collapse', function () {
+          textElement.textContent = 'Hide Resources';
+        });
+    
+        collapseElement.addEventListener('hide.bs.collapse', function () {
+          textElement.textContent = 'Resources';
+        });
+      });
     });
 
-    collapseElement.addEventListener('hide.bs.collapse', function () {
-      textElement.textContent = 'Keywords';
+    function processGetReservationSuccess (response, laboratory, resource) {
+        var messageDomIdentifier;
+        if (resource === null)
+            messageDomIdentifier = "#message-lab-" + laboratory;
+        else
+            messageDomIdentifier = "#message-resource-" + laboratory + "-" + resource;
+
+        var previousState = "?previous_status=" + response.status;
+        // TODO: translate, etc.!
+        if (response.status === "ready") {
+            location.href = response.url;
+            return;
+        } else if (response.status == "queued") {
+            $(messageDomIdentifier).text("In line, position " + response.position);
+            previousState = previousState + "&previous_position=" + response.position;
+        } else if (response.status == "initializing") {
+            $(messageDomIdentifier).text("About to start...");
+        } else if (response.status == "pending") {
+            $(messageDomIdentifier).text("Waiting...");
+        } else if (response.status == "finished") {
+            $(messageDomIdentifier).text("Reservation finished");
+        } else {
+            $(messageDomIdentifier).text(response.status);
+        }
+
+        $.ajax({
+            url: window.API_URL + "/reservations/" + response.reservation_id + previousState,
+            type: "GET"
+        }).done(function (response) {
+            if (response.success) {
+                processGetReservationSuccess(response, laboratory, resource);
+            } else {
+                // TODO
+            }
+        }).fail(function (response) {
+            // TODO
+        })
+    }
+    
+    
+    $(document).ready(function () {
+    
+        $(".access-btn").click(function () {
+            $(".access-btn").attr("disabled", "disabled");
+            $(this).text(ACCESSING_MESSAGE);
+
+            var laboratory = $(this).data("laboratory");
+            var resource = $(this).data("resource");
+            var features = [];
+            $("input[name='features-" + laboratory + "']").each(function() {
+                if ($(this).is(":checked")) {
+                    features.push($(this).data("feature"));
+                }
+            });
+
+            var requestData = {
+                laboratory: laboratory
+            };
+            if (resource) {
+                requestData['resources'] = [ resource ];
+            } else {
+                requestData['features'] = features;
+                resource = null;
+            }
+
+            $.ajax({
+                url: window.API_URL + "/reservations/",
+                type: "POST",
+                contentType: "application/json",
+                data: JSON.stringify(requestData),
+            }).done(function (response) {
+                if (response.success) {
+                    processGetReservationSuccess(response, laboratory, resource);
+                } else {
+                    // TODO
+                }
+            }).fail(function (response) {
+                // TODO
+            })
+        })
+    
     });
-  });
-
-  resourceLinks.forEach(function(link) {
-    var collapseElementId = link.getAttribute("data-bs-target");
-    var collapseElement = document.querySelector(collapseElementId);
-    var textElement = link.querySelector('span');
-
-    collapseElement.addEventListener('show.bs.collapse', function () {
-      textElement.textContent = 'Hide Resources';
-    });
-
-    collapseElement.addEventListener('hide.bs.collapse', function () {
-      textElement.textContent = 'Resources';
-    });
-  });
-});
-
+    
 </script>
 {% endblock %}

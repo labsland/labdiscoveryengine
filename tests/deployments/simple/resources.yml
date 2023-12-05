@@ -7,14 +7,14 @@
 
 dummy-1:
   # Include the URL and credentials of the remote laboratory
-  url: http://localhost:6000
+  url: http://localhost:5010
   login: lde # If always the same use DEFAULT_RESOURCE_LOGIN in credentials.yml
   password: password # If always the same use DEFAULT_RESOURCE_PASSWORD in credentials.yml
-  features: ['feature1', 'feature3']
+  features: ['feature1', 'feature2','feature5','feature6']
   api: weblablib
 dummy-2:
   # Include the URL and credentials of the remote laboratory
-  url: http://localhost:6001
+  url: http://localhost:5011
   login: lde
   password: password
   features: ['feature1', 'feature3']

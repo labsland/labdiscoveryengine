@@ -192,10 +192,12 @@ def get_latest_configuration(configuration: Optional[StoredConfiguration] = None
             for identifier, laboratory_data in configuration_values[ConfigurationFileNames.laboratories].items():
                 raw_resources = laboratory_data.get('resources', [])
                 resources = set()
+                features = set()
                 for raw_resource in raw_resources:
                     if raw_resource not in configuration.resources:
                         raise InvalidLaboratoryConfigurationError(f"Resource {raw_resource} listed in laboratory {identifier} not found in resources {list(configuration.resources.keys())}")
                     resources.add(raw_resource)
+                    features.update(configuration.resources[raw_resource].features)
 
                 laboratories[identifier] = Laboratory(
                     identifier=identifier,
@@ -205,6 +207,7 @@ def get_latest_configuration(configuration: Optional[StoredConfiguration] = None
                     keywords=laboratory_data.get('keywords'),
                     max_time=laboratory_data.get('max_time') or get_config('DEFAULT_MAX_TIME'),
                     resources=resources,
+                    features=features,
                     image=laboratory_data.get('image', '')
                 )
                 configuration.laboratories[identifier] = laboratories[identifier]
