@@ -17,11 +17,14 @@ class ReservationKeys:
         status = 'status'
         metadata = 'metadata'
         laboratory = 'laboratory'
+        resource = 'resource'
+        url = 'url'
+        session_id = 'session_id'
 
     class states:
         pending = 'pending'
         broken = 'broken'
-        unavailable = 'unavailable'
+        unavailable = 'unavailable' # CAlendar
         cancelling = 'cancelling'
         queued = 'queued'
         initializing = 'initializing'
@@ -34,6 +37,9 @@ class ReservationKeys:
     def __init__(self, reservation_id):
         self.reservation_id = reservation_id
 
+    def channel(self) -> str:
+        return f"{self.base()}:channel"
+    
     def base(self) -> str:
         return f"{Keys.base()}:reservations:{self.reservation_id}"
 
@@ -49,3 +55,13 @@ class ResourceKeys:
     
     def base(self) -> str:
         return f"{Keys.base()}:resources:{self.resource_id}"
+    
+class UserKeys:
+    def __init__(self, user_identifier: str):
+        self.user_identifier = user_identifier
+
+    def reservations(self) -> str:
+        return f"{self.base()}:reservations"
+    
+    def base(self) -> str:
+        return f"{Keys.base()}:users:{self.user_identifier}"

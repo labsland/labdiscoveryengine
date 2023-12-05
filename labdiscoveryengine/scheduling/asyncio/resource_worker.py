@@ -12,7 +12,7 @@ from labdiscoveryengine.scheduling.asyncio.redis import initialize_redis, aiored
 
 from labdiscoveryengine.scheduling.keys import ResourceKeys
 
-from labdiscoveryengine.scheduling.asyncio.redis import lua_scripts
+from labdiscoveryengine.scheduling.asyncio.redis import async_lua_scripts
 
 logger = logging.getLogger(__name__)
 
@@ -101,8 +101,12 @@ class ResourceWorker:
         and take it from where we left it
         """        
         logger.info(f"[{self.resource.identifier}] Searching for an unfinished reservations...")
-        # TODO: search for an unfinished reservation and call process_reservation
+        
         reservation_id = await aioredis_store.get(ResourceKeys(self.resource_name).assigned())
+        processor = ResourceReservationProcessor(self.resource, reservation_id)
+            
+        # Now wait until the process is over
+        await processor.process()
 
     async def process_all_existing_reservations(self):
         """
@@ -110,7 +114,7 @@ class ResourceWorker:
         want to make sure we process them all.        
         """
         while True:
-            reservation_id = await lua_scripts.assign_reservation_to_resource(self.resource_name)
+            reservation_id = await async_lua_scripts.assign_reservation_to_resource(self.resource_name)
             logging.info(f"{self.resource_name} - {reservation_id}")
             if reservation_id is None:
                 break

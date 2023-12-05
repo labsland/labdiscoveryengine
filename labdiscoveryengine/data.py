@@ -51,7 +51,7 @@ class Resource(NamedTuple):
     features: List[str]
 
     # Also acceptable: weblablib-v1.0
-    server_api: str = "labdiscoverylib-v1.0"
+    api: str = "labdiscoverylib-v1.0"
 
 
 class Laboratory(NamedTuple):

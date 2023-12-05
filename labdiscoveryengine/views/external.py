@@ -1,8 +1,8 @@
 import secrets
 from typing import List, Optional
 from flask import Blueprint, jsonify, g, request
-from labdiscoveryengine.scheduling.data import ReservationRequest
-from labdiscoveryengine.scheduling.sync.web_api import add_reservation
+from labdiscoveryengine.scheduling.data import ReservationRequest, ReservationStatus
+from labdiscoveryengine.scheduling.sync.web_api import add_reservation, get_reservation_status
 
 from labdiscoveryengine.utils import lde_config
 
@@ -71,7 +71,7 @@ def reservations():
         user_identifier = request_data.get('userIdentifier')
         if not user_identifier:
             return jsonify(success=False, code='invalid-request', message='Missing userIdentifier'), 400
-
+        
         features: List[str] = request_data.get('features') or []
         if not isinstance(features, list):
             return jsonify(success=False, code='invalid-request', message='Invalid features (must be list)'), 400
@@ -82,6 +82,19 @@ def reservations():
 
         if laboratory not in lde_config.external_users[g.external_username].laboratories:
             return jsonify(success=False, code='invalid-request', message='User {g.external_username} is not authorized to reserve in {laboratory}'), 400
+        
+        back_url = request_data.get('backUrl')
+        if not back_url:
+            return jsonify(success=False, code='invalid-request', message='Missing backUrl'), 400
+        
+        lab_max_time = lde_config.laboratories[laboratory].max_time
+        max_time = request_data.get('maxTime', lab_max_time)
+
+        # max_time cannot be higher than max time of the laboratory
+        max_time = min(max_time, lab_max_time)
+        
+        locale: Optional[str] = request_data.get('locale') or 'en'
+        user_full_name = request_data.get('userFullName')
 
         reservation_request = ReservationRequest(
             identifier=secrets.token_urlsafe(),
@@ -90,11 +103,48 @@ def reservations():
             features=features,
             external_user_identifier=user_identifier,
             user_identifier=g.external_username, 
-            user_role='external'
+            user_full_name=user_full_name,
+            user_role='external',
+            back_url=back_url,
+            max_time=max_time,
+            locale=locale,
         )
 
-        add_reservation(reservation_request=reservation_request)
+        reservation_status: ReservationStatus = add_reservation(reservation_request=reservation_request)
 
-        return jsonify(success=True, message='Reservation added', identifier=reservation_request.identifier)
+        return jsonify(success=True, message='Reservation added', **reservation_status.todict())
     
     return jsonify(success=True, message='Not implemented')
+
+@external_v1_blueprint.route('/reservations/<reservation_id>', methods=['GET'])
+def reservation_get(reservation_id: str):
+
+    previous_status = request.args.get("previous_status")
+    previous_position = request.args.get("previous_position")
+    if previous_position:
+        try:
+            previous_position = int(previous_position)
+        except Exception as err:
+            previous_position = None
+    
+    if previous_status:
+        previous_reservation_status = ReservationStatus(status=previous_status, reservation_id=reservation_id, position=previous_position)
+    else:
+        previous_reservation_status = None
+
+    # Max time is the maximum time the user is willing to wait if the state is the same
+    # as the previous state. Otherwise, it does not affect the call and the result is returned
+    # immediately
+    default_max_time = 20
+    try:
+        max_time_waiting = float(request.args.get('max_time') or default_max_time)
+    except:
+        max_time_waiting = default_max_time
+
+    max_time_waiting = min(max_time_waiting, default_max_time) # max_time cannot be higher than default_max_time
+
+    reservation_status = get_reservation_status(g.external_username, reservation_id, previous_reservation_status=previous_reservation_status, max_time=max_time_waiting)
+    if not reservation_status:
+        return jsonify(success=False, message='Reservation not found'), 404
+
+    return jsonify(success=True, **reservation_status.todict())

@@ -150,6 +150,7 @@ def get_latest_configuration(configuration: Optional[StoredConfiguration] = None
                 resource_login = resource_data.get('login') or get_config('DEFAULT_RESOURCE_LOGIN')
                 resource_password = resource_data.get('password') or get_config('DEFAULT_RESOURCE_PASSWORD')
                 resource_features = resource_data.get('features') or []
+                resource_api = resource_data.get('api') or 'labdiscoverylib'
 
                 if resource_login is None:
                     raise InvalidConfigurationValueError(f"Resource {resource_identifier} has no 'login' defined")
@@ -169,7 +170,8 @@ def get_latest_configuration(configuration: Optional[StoredConfiguration] = None
                     url=resource_url,
                     login=resource_login,
                     password=resource_password,
-                    features=resource_features
+                    features=resource_features,
+                    api=resource_api
                 )
                 
                 added_resources.append(resource_identifier)

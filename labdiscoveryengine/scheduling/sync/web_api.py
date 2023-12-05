@@ -3,25 +3,21 @@ Methods that should be called from the web interface (not running in asyncio, an
 """
 
 import json
-from typing import List, Dict
+import time
+from typing import List, Dict, Optional
 
 from flask import Flask
 from flask_redis import FlaskRedis
 
-from ..data import ReservationRequest
+from labdiscoveryengine.scheduling.keys import ReservationKeys, UserKeys
 
-redis_store = FlaskRedis()
+from ..data import ReservationRequest, ReservationStatus
+from ..redis_scripts import ScriptNames, SCRIPT_FILES
 
-# Store all the script names
-class ScriptNames:
-    store_reservation = 'store_reservation'
+redis_store = FlaskRedis(decode_responses=True)
 
-# Store all the scripts here
-_SCRIPT_FILES: Dict[str, str] = {
-    ScriptNames.store_reservation: 'lua/store_reservation.lua'
-}
 
-class LuaScripts:
+class SyncLuaScripts:
     _SCRIPT_INSTANCES = {
         # Name of the script (ScriptName): instance of th escript
     }
@@ -47,7 +43,7 @@ class LuaScripts:
         Loads all the lua scripts that are needed for the web interface,
         and store their hash in _SCRIPT_HASHES
         """
-        for script_name, script_file in _SCRIPT_FILES.items():
+        for script_name, script_file in SCRIPT_FILES.items():
             with open(script_file, 'r') as f:
                 script_content = f.read()
                 self._SCRIPT_INSTANCES[script_name] = redis_store.register_script(script_content)
@@ -61,14 +57,23 @@ class LuaScripts:
         laboratory = reservation_request.laboratory
         priority = reservation_request.priority
         resources = reservation_request.resources
+        user_identifier = reservation_request.user_identifier
 
-        args = [reservation_id, reservation_metadata, laboratory, priority]
+        args = [reservation_id, reservation_metadata, laboratory, priority, user_identifier]
         # resources is passed as a list after
         args.extend(resources)
 
         self._run_lua_script(ScriptNames.store_reservation, args=args)
 
-lua_scripts = LuaScripts()
+    def get_reservation_status(self, reservation_id: str) -> ReservationStatus:
+        """
+        Get the reservation status in an adequate class
+        """
+        result = self._run_lua_script(ScriptNames.get_reservation_status, args=[reservation_id])
+        status, external_session_id, position, url = result
+        return ReservationStatus(status=status, reservation_id=reservation_id, external_session_id=external_session_id, position=position, url=url)
+
+sync_lua_scripts = SyncLuaScripts()
 
 
 def initialize_web(app: Flask):
@@ -77,12 +82,43 @@ def initialize_web(app: Flask):
     """
     redis_store.init_app(app)
 
-    lua_scripts.initialize_web_lua_scripts()
+    sync_lua_scripts.initialize_web_lua_scripts()
     
 
-def add_reservation(reservation_request: ReservationRequest):
-    lua_scripts.store_reservation(reservation_request)
+def add_reservation(reservation_request: ReservationRequest) -> ReservationStatus:
+    sync_lua_scripts.store_reservation(reservation_request)
+    return sync_lua_scripts.get_reservation_status(reservation_request.identifier)
+
+def get_reservation_status(username: str, reservation_id: str, previous_reservation_status: Optional[ReservationStatus] = None, max_time: float = 20) -> Optional[ReservationStatus]:
+    """
+    Get the reservation status. If previous_reservation_status is provided, wait until it is different, waiting at maximum of max_time seconds.
+    """
+    reservation_identifiers = redis_store.smembers(UserKeys(username).reservations())
+    if reservation_id not in reservation_identifiers:
+        return None
+
+    t0 = time.time()
+    reservation_status: ReservationStatus = sync_lua_scripts.get_reservation_status(reservation_id)
+
+    print(reservation_status, previous_reservation_status)
+
+    if not previous_reservation_status or reservation_status.has_changed_from(previous_reservation_status):
+        return reservation_status
+
+    # Wait while the reservation status is different. Instead of waits, rely on pubsub channels
+    reservation_keys = ReservationKeys(reservation_id)
+    with redis_store.pubsub() as pubsub:
+        pubsub.subscribe(reservation_keys.channel())
+
+        elapsed = time.time() - t0
+        while elapsed < max_time and not reservation_status.has_changed_from(previous_reservation_status):
+            pubsub.get_message(timeout=max_time - elapsed)
+            reservation_status = sync_lua_scripts.get_reservation_status(reservation_id)
+            elapsed = time.time() - t0
+
+    return reservation_status
+
+        
 
 def get_reservation_list(user_identifier: str, user_role: str) -> List[str]:
     pass
-

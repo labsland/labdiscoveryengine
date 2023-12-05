@@ -1,9 +1,13 @@
 import abc
-from typing import Optional, Tuple
+import datetime
 import aiohttp
+from typing import Optional, Tuple
+
 from labdiscoveryengine.data import Resource
 from labdiscoveryengine.scheduling.data import ReservationRequest
 from labdiscoveryengine.scheduling.keys import ResourceKeys
+
+from labdiscoveryengine.utils import lde_config
 
 class GenericResourceClient:
     """
@@ -51,9 +55,43 @@ class GenericResourceClient:
             raise Exception(f"Error starting reservation {reservation_request.identifier}: {result}")
         
         url = result.get('url')
-        ldl_session_id = result.get('url')
+        ldl_session_id = result.get('session_id')
         return url, ldl_session_id
+    
+    async def get_should_finish(self, session_id: str) -> int:
+        """
+        Return the time left in the lab
+        """
+        url = self._get_url(f"/sessions/{session_id}/status")
 
+        async with self.client_session.get(url) as response:
+            result: dict = await response.json()
+
+        return result.get('should_finish') or 0
+    
+    delete_on_finish = True
+
+    async def finish(self, session_id: str) -> float:
+        """
+        Call dispose on the laboratory. If the laboratory has not finished
+        cleaning resources, it will return {"should_finish": 10} with a
+        positive number, and we should wait fo that one and call again
+        until it is a negative number.
+        """
+        url = self._get_url(f"/sessions/{session_id}")
+
+        if self.delete_on_finish:
+            async with self.client_session.delete(url) as response:
+                result: dict = await response.json()
+        else:
+            body = {
+                "action": "delete"
+            }
+            async with self.client_session.post(url, json=body) as response:
+                result: dict = await response.json()
+
+        return result.get('should_finish', -1)
+        
 class LabDiscoveryLibResourceClient(GenericResourceClient):
     """
     HTTP Client wrapper of the LDL client
@@ -62,46 +100,64 @@ class LabDiscoveryLibResourceClient(GenericResourceClient):
         return f"{self.resource.url}/ldl{path}"
     
     def _get_start_body(self, reservation_request: ReservationRequest) -> dict:
+        now = datetime.datetime.utcnow()
+        laboratory = lde_config.laboratories[reservation_request.laboratory]
         return {
-            'client_initial_data': {},
-            'server_initial_data': {
-                'request.locale': 'en', # TODO
-                'request.username.unique': '', # TODO
-                'request.full_name': '', # TODO
-                'request.experiment_id.experiment_name': '', # TODO
-                'request.experiment_id.category_name': '', # TODO
-
-                'reservation_id': reservation_request.identifier,
-
-                'priority.queue.slot.length': '', # TODO: max session length
-                'priority.queue.slot.start': '', # TODO (in UTC)
-                'priority.queue.slot.start.timestamp': '', # TODO (timestamp)
-                'priority.queue.slot.start.timezone': '', # TODO
+            'request': {
+                'locale': reservation_request.locale,
+                'ldeReservationId': reservation_request.identifier,
+                'user': {
+                    # User data
+                },
+                'metadata': {
+                    # System data
+                },
+                'backUrl': reservation_request.back_url,
             },
+            'laboratory': {
+                'name': laboratory.identifier,
+                'category': laboratory.category,
+            },
+            'user': {
+                'username': reservation_request.external_user_identifier or reservation_request.user_identifier,
+                'unique': reservation_request.unique_username,
+                'fullName': reservation_request.user_full_name,
+            },
+            'schedule': {
+                'start': now.isoformat(),
+                'length': reservation_request.max_time,
+            }
         }
 
 class WebLabLibResourceClient(GenericResourceClient):
     """
     HTTP Client wrapper of the weblablib client
     """
+    # call POST on finish
+    delete_on_finish = False
+
     def _get_url(self, path: str):
         return f"{self.resource.url}/weblab{path}"
 
     def _get_start_body(self, reservation_request: ReservationRequest) -> dict:
+        now = datetime.datetime.utcnow()
+        laboratory = lde_config.laboratories[reservation_request.laboratory]
         return {
             'client_initial_data': {},
             'server_initial_data': {
-                'request.locale': 'en', # TODO
-                'request.username.unique': '', # TODO
-                'request.full_name': '', # TODO
-                'request.experiment_id.experiment_name': '', # TODO
-                'request.experiment_id.category_name': '', # TODO
+                'request.locale': reservation_request.locale,
+                'request.username': reservation_request.external_user_identifier or reservation_request.user_identifier,
+                'request.username.unique': reservation_request.unique_username,
+                'request.full_name': reservation_request.user_full_name,
+                'request.experiment_id.experiment_name': laboratory.identifier,
+                'request.experiment_id.category_name': laboratory.category,
 
                 'reservation_id': reservation_request.identifier,
 
-                'priority.queue.slot.length': '', # TODO: max session length
-                'priority.queue.slot.start': '', # TODO (in UTC)
-                'priority.queue.slot.start.timestamp': '', # TODO (timestamp)
-                'priority.queue.slot.start.timezone': '', # TODO
+                'priority.queue.slot.length': reservation_request.max_time,
+                'priority.queue.slot.start': now.isoformat(),
+                'priority.queue.slot.start.utc': now.isoformat(),
+                'priority.queue.slot.start.timestamp': now.timestamp(),
             },
+            'back': reservation_request.back_url,
         }
