@@ -148,10 +148,15 @@
 
     function processGetReservationSuccess (response, laboratory, resource) {
         var messageDomIdentifier;
-        if (resource === null)
-            messageDomIdentifier = "#message-lab-" + laboratory;
-        else
-            messageDomIdentifier = "#message-resource-" + laboratory + "-" + resource;
+
+// The original plan was to have a specific message field for each resource but it doesn't fit all that great so we use only one
+// message field (from the lab in general).
+//        if (resource === null)
+//            messageDomIdentifier = "#message-lab-" + laboratory;
+//        else
+//            messageDomIdentifier = "#message-resource-" + laboratory + "-" + resource;
+
+        messageDomIdentifier = "#message-lab-" + laboratory;
 
         var previousState = "?previous_status=" + response.status;
         if (response.status === "ready") {
