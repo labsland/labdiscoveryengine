@@ -100,8 +100,6 @@ def get_reservation_status(username: str, reservation_id: str, previous_reservat
     t0 = time.time()
     reservation_status: ReservationStatus = sync_lua_scripts.get_reservation_status(reservation_id)
 
-    print(reservation_status, previous_reservation_status)
-
     if not previous_reservation_status or reservation_status.has_changed_from(previous_reservation_status):
         return reservation_status
 
@@ -118,6 +116,19 @@ def get_reservation_status(username: str, reservation_id: str, previous_reservat
 
     return reservation_status
 
+def cancel_reservation(user_identifier: str, reservation_id: str) -> bool:
+    """
+    Cancel a reservation.
+    """
+    reservation_identifiers = redis_store.smembers(UserKeys(user_identifier).reservations())
+    if reservation_id not in reservation_identifiers:
+        return False
+
+    pipeline = redis_store.pipeline()
+    pipeline.hset(ReservationKeys(reservation_id).base(), ReservationKeys.parameters.status, ReservationKeys.states.cancelling)
+    pipeline.publish(ReservationKeys(reservation_id).channel(), ReservationKeys.states.cancelling)
+    pipeline.execute()
+    return True
         
 
 def get_reservation_list(user_identifier: str, user_role: str) -> List[str]:

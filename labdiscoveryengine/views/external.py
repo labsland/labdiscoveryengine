@@ -2,7 +2,7 @@ import secrets
 from typing import List, Optional
 from flask import Blueprint, jsonify, g, request
 from labdiscoveryengine.scheduling.data import ReservationRequest, ReservationStatus
-from labdiscoveryengine.scheduling.sync.web_api import add_reservation, get_reservation_status
+from labdiscoveryengine.scheduling.sync.web_api import add_reservation, cancel_reservation, get_reservation_status
 
 from labdiscoveryengine.utils import lde_config
 
@@ -118,7 +118,9 @@ def reservations():
 
 @external_v1_blueprint.route('/reservations/<reservation_id>', methods=['GET'])
 def reservation_get(reservation_id: str):
-
+    """
+    Get the current reservation status
+    """
     previous_status = request.args.get("previous_status")
     previous_position = request.args.get("previous_position")
     if previous_position:
@@ -148,3 +150,11 @@ def reservation_get(reservation_id: str):
         return jsonify(success=False, message='Reservation not found'), 404
 
     return jsonify(success=True, **reservation_status.todict())
+
+@external_v1_blueprint.route('/reservations/<reservation_id>', methods=['DELETE'])
+def reservation_delete(reservation_id: str):
+    """
+    Cancel the reservation
+    """
+    result = cancel_reservation(g.external_username, reservation_id)
+    return jsonify(success=True, cancelled=result)

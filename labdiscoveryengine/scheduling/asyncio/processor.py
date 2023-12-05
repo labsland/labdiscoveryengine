@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import time
 from typing import Optional
 
 from labdiscoveryengine.scheduling.data import ReservationRequest
@@ -91,7 +92,7 @@ class ResourceReservationProcessor:
                 status, session_id = await self.initialize_laboratory(reservation_request)
 
             if await self.did_user_cancel():
-                return await self.cancelled(reservation_request=reservation_request, session_id=None)
+                return await self.cancelled(reservation_request=reservation_request, session_id=session_id)
 
             if status == ReservationKeys.states.ready:
 
@@ -101,9 +102,12 @@ class ResourceReservationProcessor:
                 while status == ReservationKeys.states.ready:
 
                     if await self.did_user_cancel():
-                        return await self.cancelled(reservation_request=reservation_request, session_id=None)
+                        return await self.cancelled(reservation_request=reservation_request, session_id=session_id)
 
                     status = await self.wait_for_reservation_being_over(session_id, max_time=10)
+                
+                if status == ReservationKeys.states.cancelling:
+                    return await self.cancelled(reservation_request=reservation_request, session_id=session_id)
 
             if status == ReservationKeys.states.finished:
                 # TODO: what should we do in this case?
@@ -160,7 +164,19 @@ class ResourceReservationProcessor:
         else: # if positive, wait the time left or 
             waiting_time = min(should_finish, max_time)
 
-        await asyncio.sleep(waiting_time)
+        # We have to wait for waiting_time. But we might wait shorter if there is activity
+        # (e.g., cancellation), so we wait in a different way.
+        t0 = time.time()
+
+        async with aioredis_store.pubsub() as pubsub:
+            await pubsub.subscribe(self.reservation_keys.channel())
+            elapsed = time.time() - t0
+            while elapsed <= waiting_time:
+                message = await pubsub.get_message(timeout=waiting_time - elapsed)
+                elapsed = time.time() - t0
+                if await self.did_user_cancel():
+                    return ReservationKeys.states.cancelling
+        
         return ReservationKeys.states.ready
     
     async def finish(self, reservation_request: Optional[ReservationRequest], session_id: Optional[str]):

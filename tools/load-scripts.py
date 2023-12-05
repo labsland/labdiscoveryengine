@@ -1,3 +1,4 @@
+import sys
 import time
 import pprint
 import requests
@@ -34,11 +35,17 @@ def main():
     if not result.get('success'):
         return
 
+    if '--cancelling' in sys.argv:
+        print(f"[{time.asctime()}] Cancelling...")
+        r = sess.delete(f"{base_url}/external/v1/reservations/{reservation_id}", auth=auth)
+        pprint.pprint(r.json())
+        print(f"[{time.asctime()}] Cancelled")
+
     while True:
         parameters = f'?previous_status={previous_status}&max_time=8'
         if previous_position is not None:
             parameters += f'&previous_position={previous_position}'
-        print(time.asctime(), "before request...")
+        print(time.asctime(), f"before request... parameters={parameters}")
         r = sess.get(f"{base_url}/external/v1/reservations/{reservation_id}" + parameters, auth=auth)
         r.raise_for_status()
         result = r.json()
@@ -46,7 +53,7 @@ def main():
         previous_status = result['status']
         previous_position = result.get('position')
         pprint.pprint(result)
-        if result['status'] not in ('queued', 'initializing', 'ready'):
+        if result['status'] not in ('queued', 'initializing', 'ready', 'cancelling', 'finishing'):
             break
 
 
