@@ -102,6 +102,13 @@
     var RESERVE_FINISHED_MESSAGE = {{ gettext("Reservation finished...")|tojson }};  // TO-DO: What is this state?
     var RESERVE_READY_MESSAGE = {{ gettext("Reservation is ready. Redirecting...")|tojson }};
     var RESERVE_QUEUED = {{ gettext("Reservation is queued in position {pos}...")|tojson }};
+
+    var HIDE_KEYWORDS_MESSAGE = {{ gettext("Hide Keywords")|tojson }};
+    var KEYWORDS_MESSAGE = {{ gettext("Keywords")|tojson }};
+
+    var HIDE_RESOURCES_MESSAGE = {{ gettext("Hide Resources")|tojson }};
+    var RESOURCES_MESSAGE = {{ gettext("Resources")|tojson }};
+
     var API_URL = {{ url_for(".api")|tojson }};
 </script>
 
@@ -116,11 +123,11 @@
         var textElement = link.querySelector('span');
     
         collapseElement.addEventListener('show.bs.collapse', function () {
-          textElement.textContent = 'Hide Keywords';
+          textElement.textContent = HIDE_KEYWORDS_MESSAGE;
         });
     
         collapseElement.addEventListener('hide.bs.collapse', function () {
-          textElement.textContent = 'Keywords';
+          textElement.textContent = KEYWORDS_MESSAGE;
         });
       });
     
@@ -130,11 +137,11 @@
         var textElement = link.querySelector('span');
     
         collapseElement.addEventListener('show.bs.collapse', function () {
-          textElement.textContent = 'Hide Resources';
+          textElement.textContent = HIDE_RESOURCES_MESSAGE;
         });
     
         collapseElement.addEventListener('hide.bs.collapse', function () {
-          textElement.textContent = 'Resources';
+          textElement.textContent = RESOURCES_MESSAGE;
         });
       });
     });
