@@ -8,17 +8,17 @@
 # This file is focused on information that the user should be aware: name of the lab, category, image, etc.
 
 dummy:
-  display_name: Dummy Lab # optional
-  description: The Dummy Lab is an example of a laboratory. Here would normally go the description. # optional
+  display_name: FPGA Lab # optional
+  description: Access a FPGA development board by Intel along with various peripherals # optional
   keywords:
-    - example
-    - dummy
-  category: Dummy laboratories # optional
+    - fpga
+    - electronics
+  category: FPGA laboratories # optional
   max_time: 300 # optional, maximum time users can use the lab, in seconds
-  image: https://placehold.it/400x400 # optional
+  image: https://labsland.com/pub/labs/file-e7311d-de1-soc_thumb.jpg # optional
   resources: # alternatively you can put them inline: dummy-1, dummy-2
-  - dummy-1
-  - dummy-2
+  - fpga-1
+  - fpga-2
 
 archimedes:
   display_name: Archimedes Lab # optional
@@ -29,7 +29,7 @@ archimedes:
     - liquids
   category: Physics # optional
   max_time: 300 # optional, maximum time users can use the lab, in seconds
-  image: https://placehold.it/400x400 # optional
+  image: https://labsland.com/pub/labs/file-cd0988-buoyancy_thumb.jpg # optional
   resources: # alternatively you can put them inline: dummy-1, dummy-2
   - arch-1
   - arch-2
@@ -43,24 +43,24 @@ organic_chemistry:
     - reactions
   category: Chemistry
   max_time: 600
-  image: https://placehold.it/400x400
+  image: https://labsland.com/pub/labs/file-842c1a-diffusion_plot_thumb.png
   resources:
     - orgchem-1
     - orgchem-2
 
 solar_system:
-  display_name: Solar System Lab
-  description: Explore the solar system and conduct experiments related to planetary motion and celestial mechanics.
+  display_name: STM32 Lab
+  description: Access a STM32 Nucleo device, useful for embedded systems development and IoT applications.
   keywords:
-    - astronomy
-    - solar system
-    - planets
-  category: Astronomy
+    - stm32
+    - iot
+    - nucleo
+  category: Microprocessors
   max_time: 500
-  image: https://placehold.it/400x400
+  image: https://labsland.com/pub/labs/file-8a04f1-arm_transparent_thumb.png
   resources:
-    - solar-1
-    - solar-2
+    - stm32-1
+    - stm32-2
 
 robotic_arm:
   display_name: Robotic Arm Lab
@@ -71,7 +71,7 @@ robotic_arm:
     - programming
   category: Engineering
   max_time: 400
-  image: https://placehold.it/400x400
+  image: https://labsland.com/pub/lde/robotic-arm.jpeg
   resources:
     - robot-1
     - robot-2

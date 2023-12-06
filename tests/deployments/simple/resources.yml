@@ -5,14 +5,14 @@
 # able to specify the name of the laboratory, which resources are assigned to what
 # laboratory, and information that the user should see (e.g., the image, category, etc.)
 
-dummy-1:
+fpga-1:
   # Include the URL and credentials of the remote laboratory
   url: http://localhost:5010
   login: lde # If always the same use DEFAULT_RESOURCE_LOGIN in credentials.yml
   password: password # If always the same use DEFAULT_RESOURCE_PASSWORD in credentials.yml
   features: ['feature1', 'feature2','feature5','feature6']
   api: weblablib
-dummy-2:
+fpga-2:
   # Include the URL and credentials of the remote laboratory
   url: http://localhost:5011
   login: lde
@@ -46,13 +46,13 @@ orgchem-2:
   features: ['feature2', 'feature4']
 
 # New resources for Solar System Lab
-solar-1:
+stm32-1:
   url: http://localhost:5200
   login: lde
   password: password
   features: ['feature5', 'feature6']
 
-solar-2:
+stm32-2:
   url: http://localhost:5201
   login: lde
   password: password
