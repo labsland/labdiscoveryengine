@@ -1,7 +1,7 @@
 :tocdepth: 2
 
-LabDiscoveryEngine - 0.0.1
-==========================
+LabDiscoveryEngine - 0.1
+========================
 
 LabDiscoveryEngine 
 
