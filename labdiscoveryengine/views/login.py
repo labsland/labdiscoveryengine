@@ -30,6 +30,13 @@ def before_request():
     g.logout_form = logout_form
 
 
+@login_blueprint.context_processor
+def inject_vars():
+    username = session.get('username')
+    role = session.get('role')
+    return dict(username=username, role=role)
+
+
 @login_blueprint.route('/', methods=['GET', 'POST'])
 def index():
     return render_themed_template('index.html')
@@ -37,6 +44,13 @@ def index():
 
 @login_blueprint.route('/login', methods=['GET', 'POST'])
 def login():
+
+    # If we are already logged in we redirect to the labs screen.
+    username = session.get('username')
+    role = session.get('role')
+    if username is not None and role is not None:
+        return redirect(url_for('user.index'))
+
     form = LoginForm()
     if request.method == 'POST':
         if form.validate_on_submit():

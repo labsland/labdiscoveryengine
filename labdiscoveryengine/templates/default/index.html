@@ -41,8 +41,15 @@
                 </div>
                 <div class="card-body">
                     <h5 class="card-title">Access Laboratories</h5>
-                    <p class="card-text">Login to access the labs provided by this LabDiscoveryEngine instance.</p>
-                    <a href="{{ url_for('login.login') }}" class="btn btn-primary">Login</a>
+
+                    {% if username %}
+                        <p class="card-text">Access the labs provided by this LabDiscoveryEngine instance.</p>
+                        <a href="{{ url_for('user.index') }}" class="btn btn-primary">Access</a>
+                    {% else %}
+                        <p class="card-text">Login to access the labs provided by this LabDiscoveryEngine instance.</p>
+                        <a href="{{ url_for('login.login') }}" class="btn btn-primary">Login</a>
+                    {% endif %}
+
                 </div>
             </div>
         </div>
