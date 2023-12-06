@@ -3,7 +3,11 @@
 LabDiscoveryEngine - 0.1
 ========================
 
-LabDiscoveryEngine 
+LabDiscoveryEngine
+
+This is the documentation for the LabDiscoveryEngine RLMS.
+LabDiscoveryEngine is an Open Source RLMS to allow institutions to create, host, share and discover
+remote laboratories.
 
 User's guide
 ------------
@@ -12,6 +16,7 @@ User's guide
    :maxdepth: 2
 
    quickstart
+   configuration
    license
 
 
