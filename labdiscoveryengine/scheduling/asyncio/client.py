@@ -100,7 +100,7 @@ class LabDiscoveryLibResourceClient(GenericResourceClient):
         return f"{self.resource.url}/ldl{path}"
     
     def _get_start_body(self, reservation_request: ReservationRequest) -> dict:
-        now = datetime.datetime.utcnow()
+        now = datetime.datetime.now(datetime.timezone.utc)
         laboratory = lde_config.laboratories[reservation_request.laboratory]
         return {
             'request': {
@@ -140,7 +140,7 @@ class WebLabLibResourceClient(GenericResourceClient):
         return f"{self.resource.url}/weblab{path}"
 
     def _get_start_body(self, reservation_request: ReservationRequest) -> dict:
-        now = datetime.datetime.utcnow()
+        now = datetime.datetime.now(datetime.timezone.utc)
         laboratory = lde_config.laboratories[reservation_request.laboratory]
         return {
             'client_initial_data': {},
