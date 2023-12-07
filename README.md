@@ -49,8 +49,7 @@ The LabDiscoveryEngine project operates under a cascade funding model, provided 
 
 Funded by the European Union. Views and opinions expressed are however those of the author(s) only and do not necessarily reflect those of the European Union or European Commission. Neither the European Union nor the granting authority can be held responsible for them. Funded within the framework of the NGI Search project under grant agreement No 101069364.
 
-![EU Flag](https://labsland.com/images/supportedby/eu-emblem.jpeg)
-
+<img src="https://labsland.com/images/supportedby/eu-emblem.jpeg" style="width: 200px">
 
 ## Development
 
