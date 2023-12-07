@@ -1,0 +1,17 @@
+# In this file you store the standard configuration variables.
+# Note: The variables in this file are loaded into the environment before loading the standard Flask-style configuration in e.g. variables.py.
+# 
+# DEFAULT_MAX_TIME: 300 # So you do not need to put max_time: 300 in each laboratory
+# DEFAULT_RESOURCE_LOGIN: lde # If you have the same login in all the laboratories
+# DEFAULT_RESOURCE_PASSWORD: lde # If you have the same password in all the laboratories
+# 
+# REDIS_URL: redis://localhost:6379/0
+MONGO_URI: mongodb://localhost:27017/lde
+SQLALCHEMY_DATABASE_URI: mysql+pymysql://lde:ldepassword@localhost:3306/lde # Optional
+SECRET_KEY: ivTp3UApt7epzy0YzlNOEGirzKe1gHC4JQJc_rcuS2s
+DEFAULT_LAB_VISIBILITY: public # public or private
+
+INSTITUTION_LOGO: https://labsland.com/pub/lde/labsland-logo-long.png # Owner institution's logo or image.
+INSTITUTION_NAME: LabsLand # Owner institution's name.
+INSTITUTION_DESCRIPTION: LabsLand - The remote labs company. # Brief description about the owner's institution.
+INSTITUTION_URL: https://labsland.com  # URL to the main institution's page.

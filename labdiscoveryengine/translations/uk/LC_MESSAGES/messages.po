@@ -1,16 +1,15 @@
-# Ukrainian translations for labdiscoveryengine.
-# Copyright (C) 2023 ORGANIZATION
-# This file is distributed under the same license as the labdiscoveryengine
-# project.
-# FIRST AUTHOR <EMAIL@ADDRESS>, 2023.
+# Українські переклади для labdiscoveryengine.
+# Авторське право (C) 2023 ОРГАНІЗАЦІЯ
+# Цей файл розповсюджується на тих же умовах, що й проект labdiscoveryengine.
+# ПЕРШИЙ АВТОР <EMAIL@ADDRESS>, 2023.
 #
 msgid ""
 msgstr ""
 "Project-Id-Version: labdiscoveryengine 0.1\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2023-08-23 20:53-0700\n"
+"POT-Creation-Date: 2023-12-07 02:14-0800\n"
 "PO-Revision-Date: 2023-08-23 20:53-0700\n"
-"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Last-Translator: ПОВНЕ ІМ'Я <EMAIL@ADDRESS>\n"
 "Language: uk\n"
 "Language-Team: uk <LL@li.org>\n"
 "Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
@@ -20,14 +19,211 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.12.1\n"
 
+#: labdiscoveryengine/templates/default/index.html:29
+msgid "Learn about LabDiscoveryEngine"
+msgstr "Дізнайтеся про LabDiscoveryEngine"
+
+#: labdiscoveryengine/templates/default/index.html:30
+msgid "Explore the main website to find out more about Lab Discovery Engine."
+msgstr "Перегляньте основний вебсайт, щоб дізнатися більше про Lab Discovery Engine."
+
+#: labdiscoveryengine/templates/default/index.html:31
+msgid "Learn More"
+msgstr "Дізнатися більше"
+
+#: labdiscoveryengine/templates/default/index.html:43
+msgid "Access Laboratories"
+msgstr "Доступ до лабораторій"
+
+#: labdiscoveryengine/templates/default/index.html:46
+msgid "Access the labs provided by this LabDiscoveryEngine instance."
+msgstr "Отримайте доступ до лабораторій, які надає цей екземпляр LabDiscoveryEngine."
+
+#: labdiscoveryengine/templates/default/index.html:49
+msgid "Login to access the labs provided by this LabDiscoveryEngine instance."
+msgstr "Увійдіть, щоб отримати доступ до лабораторій, які надає цей екземпляр LabDiscoveryEngine."
+
+#: labdiscoveryengine/templates/default/index.html:50
+#: labdiscoveryengine/templates/default/login.html:36
+msgid "Sign in"
+msgstr "Увійти"
+
+#: labdiscoveryengine/templates/default/index.html:64
+msgid "Published Laboratories List"
+msgstr "Опублікований список лабораторій"
+
+#: labdiscoveryengine/templates/default/index.html:65
+msgid "Explore the labs offered by this instance."
+msgstr "Ознайомтеся з лабораторіями, які пропонує цей екземпляр."
+
+#: labdiscoveryengine/templates/default/index.html:66
+msgid "View labs"
+msgstr "Переглянути лабораторії"
+
 #: labdiscoveryengine/templates/default/login.html:9
+msgid "Log in"
+msgstr "Увійти"
+
+#: labdiscoveryengine/templates/default/login.html:15
 msgid "Username"
 msgstr "Ім'я користувача"
 
-#: labdiscoveryengine/templates/default/login.html:13
+#: labdiscoveryengine/templates/default/login.html:26
 msgid "Password"
 msgstr "Пароль"
 
-#: labdiscoveryengine/templates/default/login.html:16
-msgid "Sign in"
-msgstr "Увійти"
+#: labdiscoveryengine/templates/default/user/_base.html:10
+msgid "Logged in as"
+msgstr "Ви увійшли як"
+
+#: labdiscoveryengine/templates/default/user/_base.html:12
+msgid "Administration panel"
+msgstr "Панель адміністрування"
+
+#: labdiscoveryengine/templates/default/user/_base.html:17
+msgid "Log out"
+msgstr "Вийти"
+
+#: labdiscoveryengine/templates/default/user/index.html:8
+msgid "You are not part of any group"
+msgstr "Ви не є частиною жодної групи"
+
+#: labdiscoveryengine/templates/default/user/index.html:32
+#: labdiscoveryengine/templates/default/user/index.html:62
+#: labdiscoveryengine/templates/default/user/index.html:79
+msgid "Access"
+msgstr "Доступ"
+
+#: labdiscoveryengine/templates/default/user/index.html:36
+#: labdiscoveryengine/templates/default/user/index.html:118
+msgid "Keywords"
+msgstr "Ключові слова"
+
+#: labdiscoveryengine/templates/default/user/index.html:37
+#: labdiscoveryengine/templates/default/user/index.html:121
+msgid "Resources"
+msgstr "Ресурси"
+
+#: labdiscoveryengine/templates/default/user/index.html:38
+#: labdiscoveryengine/templates/default/user/index.html:61
+msgid "Features"
+msgstr "Особливості"
+
+#: labdiscoveryengine/templates/default/user/index.html:46
+msgid "Keywords:"
+msgstr "Ключові слова:"
+
+#: labdiscoveryengine/templates/default/user/index.html:60
+msgid "Resource"
+msgstr "Ресурс"
+
+#: labdiscoveryengine/templates/default/user/index.html:76
+msgid "No feature"
+msgstr "Особливостей немає"
+
+#: labdiscoveryengine/templates/default/user/index.html:89
+msgid "Features:"
+msgstr "Особливості:"
+
+#: labdiscoveryengine/templates/default/user/index.html:109
+msgid "Accessing"
+msgstr "Доступ до"
+
+#: labdiscoveryengine/templates/default/user/index.html:110
+msgid "Starting reserve process..."
+msgstr "Початок процесу резервування..."
+
+#: labdiscoveryengine/templates/default/user/index.html:111
+msgid "Waiting to be ready..."
+msgstr "Очікування готовності..."
+
+#: labdiscoveryengine/templates/default/user/index.html:112
+msgid "Reservation finished..."
+msgstr "Резервування завершено..."
+
+#: labdiscoveryengine/templates/default/user/index.html:113
+msgid "Reservation is ready. Redirecting..."
+msgstr "Резервування готове. Переадресація..."
+
+#: labdiscoveryengine/templates/default/user/index.html:114
+msgid "Reservation is queued in position {pos}..."
+msgstr "Резервування в черзі на позиції {pos}..."
+
+#: labdiscoveryengine/templates/default/user/index.html:115
+msgid "Reservation cancelled: no resource was available."
+msgstr "Резервування скасовано: ресурси не були доступні."
+
+#: labdiscoveryengine/templates/default/user/index.html:117
+msgid "Hide Keywords"
+msgstr "Сховати ключові слова"
+
+#: labdiscoveryengine/templates/default/user/index.html:120
+msgid "Hide Resources"
+msgstr "Сховати ресурси"
+
+#: labdiscoveryengine/templates/lde-admin/index.html:5
+msgid "Back to the labs"
+msgstr "Повернутися до лабораторій"
+
+#: labdiscoveryengine/templates/lde-admin/index.html:8
+msgid "Welcome to the administration panel"
+msgstr "Ласкаво просимо до панелі адміністрування"
+
+#: labdiscoveryengine/templates/lde-admin/index.html:12
+msgid ""
+"Here you can create student accounts, add them in groups, and allow those"
+" groups to use laboratories."
+msgstr ""
+"Тут ви можете створювати облікові записи студентів, додавати їх до груп та"
+" надавати цим групам доступ до лабораторій."
+
+#: labdiscoveryengine/templates/lde-admin/index.html:14
+#: labdiscoveryengine/templates/lde-admin/no-sqlalchemy.html:4
+msgid "No SQLAlchemy configured"
+msgstr "SQLAlchemy не налаштовано"
+
+#: labdiscoveryengine/templates/lde-admin/index.html:15
+#: labdiscoveryengine/templates/lde-admin/no-sqlalchemy.html:5
+msgid ""
+"If you want to be able to add students, groups and permissions, please go"
+" to the documentation to see how to add SQLAlchemy support:"
+msgstr ""
+
+#: labdiscoveryengine/templates/lde-admin/index.html:15
+#: labdiscoveryengine/templates/lde-admin/no-sqlalchemy.html:5
+msgid ""
+"If you want to be able to add students, groups and permissions, please go"
+" to the documentation to see how to add SQLAlchemy support:"
+msgstr "Якщо ви хочете мати можливість додавати студентів, групи та дозволи, будь ласка, зверніться до документації, щоб дізнатися, як додати підтримку SQLAlchemy:"
+
+#: labdiscoveryengine/templates/lde-admin/index.html:22
+msgid ""
+"You can also see when students used the laboratory by checking the User "
+"sessions."
+msgstr ""
+
+#: labdiscoveryengine/templates/lde-admin/index.html:24
+#: labdiscoveryengine/templates/lde-admin/no-pymongo.html:4
+msgid "No PyMongo configured"
+msgstr ""
+
+#: labdiscoveryengine/templates/lde-admin/index.html:25
+#: labdiscoveryengine/templates/lde-admin/no-pymongo.html:5
+msgid ""
+"If you want to be able to store user sessions to know who used when each "
+"laboratory, please go to the documentation to see how to add PyMongo "
+"support:"
+msgstr ""
+
+#: labdiscoveryengine/views/admin.py:82
+msgid "Password is required"
+msgstr ""
+
+#: labdiscoveryengine/views/admin.py:98
+msgid "Passwords do not match"
+msgstr ""
+
+#: labdiscoveryengine/views/login.py:91
+msgid "Invalid username or password"
+msgstr ""
+

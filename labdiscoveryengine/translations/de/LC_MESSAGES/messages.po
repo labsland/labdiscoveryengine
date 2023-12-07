@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: labdiscoveryengine 0.1\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2023-08-23 20:53-0700\n"
+"POT-Creation-Date: 2023-12-07 02:14-0800\n"
 "PO-Revision-Date: 2023-08-23 20:53-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: de\n"
@@ -19,14 +19,202 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.12.1\n"
 
+#: labdiscoveryengine/templates/default/index.html:29
+msgid "Learn about LabDiscoveryEngine"
+msgstr ""
+
+#: labdiscoveryengine/templates/default/index.html:30
+msgid "Explore the main website to find out more about Lab Discovery Engine."
+msgstr ""
+
+#: labdiscoveryengine/templates/default/index.html:31
+msgid "Learn More"
+msgstr ""
+
+#: labdiscoveryengine/templates/default/index.html:43
+msgid "Access Laboratories"
+msgstr ""
+
+#: labdiscoveryengine/templates/default/index.html:46
+msgid "Access the labs provided by this LabDiscoveryEngine instance."
+msgstr ""
+
+#: labdiscoveryengine/templates/default/index.html:49
+msgid "Login to access the labs provided by this LabDiscoveryEngine instance."
+msgstr ""
+
+#: labdiscoveryengine/templates/default/index.html:50
+#: labdiscoveryengine/templates/default/login.html:36
+msgid "Sign in"
+msgstr "Anmelden"
+
+#: labdiscoveryengine/templates/default/index.html:64
+msgid "Published Laboratories List"
+msgstr ""
+
+#: labdiscoveryengine/templates/default/index.html:65
+msgid "Explore the labs offered by this instance."
+msgstr ""
+
+#: labdiscoveryengine/templates/default/index.html:66
+msgid "View labs"
+msgstr ""
+
 #: labdiscoveryengine/templates/default/login.html:9
+msgid "Log in"
+msgstr ""
+
+#: labdiscoveryengine/templates/default/login.html:15
 msgid "Username"
 msgstr "Benutzername"
 
-#: labdiscoveryengine/templates/default/login.html:13
+#: labdiscoveryengine/templates/default/login.html:26
 msgid "Password"
 msgstr "Passwort"
 
-#: labdiscoveryengine/templates/default/login.html:16
-msgid "Sign in"
-msgstr "Anmelden"
+#: labdiscoveryengine/templates/default/user/_base.html:10
+msgid "Logged in as"
+msgstr ""
+
+#: labdiscoveryengine/templates/default/user/_base.html:12
+msgid "Administration panel"
+msgstr ""
+
+#: labdiscoveryengine/templates/default/user/_base.html:17
+msgid "Log out"
+msgstr ""
+
+#: labdiscoveryengine/templates/default/user/index.html:8
+msgid "You are not part of any group"
+msgstr ""
+
+#: labdiscoveryengine/templates/default/user/index.html:32
+#: labdiscoveryengine/templates/default/user/index.html:62
+#: labdiscoveryengine/templates/default/user/index.html:79
+msgid "Access"
+msgstr ""
+
+#: labdiscoveryengine/templates/default/user/index.html:36
+#: labdiscoveryengine/templates/default/user/index.html:118
+msgid "Keywords"
+msgstr ""
+
+#: labdiscoveryengine/templates/default/user/index.html:37
+#: labdiscoveryengine/templates/default/user/index.html:121
+msgid "Resources"
+msgstr ""
+
+#: labdiscoveryengine/templates/default/user/index.html:38
+#: labdiscoveryengine/templates/default/user/index.html:61
+msgid "Features"
+msgstr ""
+
+#: labdiscoveryengine/templates/default/user/index.html:46
+msgid "Keywords:"
+msgstr ""
+
+#: labdiscoveryengine/templates/default/user/index.html:60
+msgid "Resource"
+msgstr ""
+
+#: labdiscoveryengine/templates/default/user/index.html:76
+msgid "No feature"
+msgstr ""
+
+#: labdiscoveryengine/templates/default/user/index.html:89
+msgid "Features:"
+msgstr ""
+
+#: labdiscoveryengine/templates/default/user/index.html:109
+msgid "Accessing"
+msgstr ""
+
+#: labdiscoveryengine/templates/default/user/index.html:110
+msgid "Starting reserve process..."
+msgstr ""
+
+#: labdiscoveryengine/templates/default/user/index.html:111
+msgid "Waiting to be ready..."
+msgstr ""
+
+#: labdiscoveryengine/templates/default/user/index.html:112
+msgid "Reservation finished..."
+msgstr ""
+
+#: labdiscoveryengine/templates/default/user/index.html:113
+msgid "Reservation is ready. Redirecting..."
+msgstr ""
+
+#: labdiscoveryengine/templates/default/user/index.html:114
+msgid "Reservation is queued in position {pos}..."
+msgstr ""
+
+#: labdiscoveryengine/templates/default/user/index.html:115
+msgid "Reservation cancelled: no resource was available."
+msgstr ""
+
+#: labdiscoveryengine/templates/default/user/index.html:117
+msgid "Hide Keywords"
+msgstr ""
+
+#: labdiscoveryengine/templates/default/user/index.html:120
+msgid "Hide Resources"
+msgstr ""
+
+#: labdiscoveryengine/templates/lde-admin/index.html:5
+msgid "Back to the labs"
+msgstr ""
+
+#: labdiscoveryengine/templates/lde-admin/index.html:8
+msgid "Welcome to the administration panel"
+msgstr ""
+
+#: labdiscoveryengine/templates/lde-admin/index.html:12
+msgid ""
+"Here you can create student accounts, add them in groups, and allow those"
+" groups to use laboratories."
+msgstr ""
+
+#: labdiscoveryengine/templates/lde-admin/index.html:14
+#: labdiscoveryengine/templates/lde-admin/no-sqlalchemy.html:4
+msgid "No SQLAlchemy configured"
+msgstr ""
+
+#: labdiscoveryengine/templates/lde-admin/index.html:15
+#: labdiscoveryengine/templates/lde-admin/no-sqlalchemy.html:5
+msgid ""
+"If you want to be able to add students, groups and permissions, please go"
+" to the documentation to see how to add SQLAlchemy support:"
+msgstr ""
+
+#: labdiscoveryengine/templates/lde-admin/index.html:22
+msgid ""
+"You can also see when students used the laboratory by checking the User "
+"sessions."
+msgstr ""
+
+#: labdiscoveryengine/templates/lde-admin/index.html:24
+#: labdiscoveryengine/templates/lde-admin/no-pymongo.html:4
+msgid "No PyMongo configured"
+msgstr ""
+
+#: labdiscoveryengine/templates/lde-admin/index.html:25
+#: labdiscoveryengine/templates/lde-admin/no-pymongo.html:5
+msgid ""
+"If you want to be able to store user sessions to know who used when each "
+"laboratory, please go to the documentation to see how to add PyMongo "
+"support:"
+msgstr ""
+
+#: labdiscoveryengine/views/admin.py:82
+msgid "Password is required"
+msgstr ""
+
+#: labdiscoveryengine/views/admin.py:98
+msgid "Passwords do not match"
+msgstr ""
+
+#: labdiscoveryengine/views/login.py:91
+msgid "Invalid username or password"
+msgstr ""
+

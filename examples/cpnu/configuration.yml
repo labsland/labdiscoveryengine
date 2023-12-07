@@ -1,0 +1,17 @@
+# In this file you store the standard configuration variables.
+# Note: The variables in this file are loaded into the environment before loading the standard Flask-style configuration in e.g. variables.py.
+# 
+# DEFAULT_MAX_TIME: 300 # So you do not need to put max_time: 300 in each laboratory
+# DEFAULT_RESOURCE_LOGIN: lde # If you have the same login in all the laboratories
+# DEFAULT_RESOURCE_PASSWORD: lde # If you have the same password in all the laboratories
+# 
+# REDIS_URL: redis://localhost:6379/0
+# MONGO_URI: mongodb://localhost:27017/ldecpnu
+# SQLALCHEMY_DATABASE_URI: mysql+pymysql://lde:ldepassword@localhost:3306/ldecpnu # Optional
+SECRET_KEY: ivTp3UApt7epzy0YzlNOEGirzKe1gHC4JQJc_rcuS2s
+DEFAULT_LAB_VISIBILITY: public # public or private
+
+INSTITUTION_LOGO: https://lh3.googleusercontent.com/8ue_yaM1cDRpbqzM6En5zDjfvoH-ghp8UQkbBMLBzNfQG_wM2Q7repbSEKoETLDHvr5M62GzA5NVECzaCTUaK5OQqklPPO7EQluqB0SMnyojm6XKcwdbIL3A7xiyH7VveQ=w1280 # Owner institution's logo or image.
+INSTITUTION_NAME: CPNU # Owner institution's name.
+INSTITUTION_DESCRIPTION: Національний університет «Чернігівська політехніка # Brief description about the owner's institution.
+INSTITUTION_URL: https://stu.cn.ua # URL to the main institution's page.
