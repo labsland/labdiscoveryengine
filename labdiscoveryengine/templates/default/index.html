@@ -44,7 +44,7 @@
 
                     {% if username %}
                         <p class="card-text">{{ gettext("Access the labs provided by this LabDiscoveryEngine instance.") }}</p>
-                        <a href="{{ url_for('user.index') }}" class="btn btn-primary">Access</a>
+                        <a href="{{ url_for('user.index') }}" class="btn btn-primary">{{ gettext("Access") }}</a>
                     {% else %}
                         <p class="card-text">{{ gettext("Login to access the labs provided by this LabDiscoveryEngine instance.") }}</p>
                         <a href="{{ url_for('login.login') }}" class="btn btn-primary">{{ gettext("Sign in") }}</a>

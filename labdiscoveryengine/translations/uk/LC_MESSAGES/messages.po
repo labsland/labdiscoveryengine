@@ -1,13 +1,14 @@
 # Українські переклади для labdiscoveryengine.
 # Авторське право (C) 2023 ОРГАНІЗАЦІЯ
-# Цей файл розповсюджується на тих же умовах, що й проект labdiscoveryengine.
+# Цей файл розповсюджується на тих же умовах, що й проект
+# labdiscoveryengine.
 # ПЕРШИЙ АВТОР <EMAIL@ADDRESS>, 2023.
 #
 msgid ""
 msgstr ""
 "Project-Id-Version: labdiscoveryengine 0.1\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2023-12-07 02:14-0800\n"
+"POT-Creation-Date: 2023-12-07 08:55-0800\n"
 "PO-Revision-Date: 2023-08-23 20:53-0700\n"
 "Last-Translator: ПОВНЕ ІМ'Я <EMAIL@ADDRESS>\n"
 "Language: uk\n"
@@ -25,7 +26,9 @@ msgstr "Дізнайтеся про LabDiscoveryEngine"
 
 #: labdiscoveryengine/templates/default/index.html:30
 msgid "Explore the main website to find out more about Lab Discovery Engine."
-msgstr "Перегляньте основний вебсайт, щоб дізнатися більше про Lab Discovery Engine."
+msgstr ""
+"Перегляньте основний вебсайт, щоб дізнатися більше про Lab Discovery "
+"Engine."
 
 #: labdiscoveryengine/templates/default/index.html:31
 msgid "Learn More"
@@ -37,11 +40,22 @@ msgstr "Доступ до лабораторій"
 
 #: labdiscoveryengine/templates/default/index.html:46
 msgid "Access the labs provided by this LabDiscoveryEngine instance."
-msgstr "Отримайте доступ до лабораторій, які надає цей екземпляр LabDiscoveryEngine."
+msgstr ""
+"Отримайте доступ до лабораторій, які надає цей екземпляр "
+"LabDiscoveryEngine."
+
+#: labdiscoveryengine/templates/default/index.html:47
+#: labdiscoveryengine/templates/default/user/index.html:32
+#: labdiscoveryengine/templates/default/user/index.html:62
+#: labdiscoveryengine/templates/default/user/index.html:79
+msgid "Access"
+msgstr "Доступ"
 
 #: labdiscoveryengine/templates/default/index.html:49
 msgid "Login to access the labs provided by this LabDiscoveryEngine instance."
-msgstr "Увійдіть, щоб отримати доступ до лабораторій, які надає цей екземпляр LabDiscoveryEngine."
+msgstr ""
+"Увійдіть, щоб отримати доступ до лабораторій, які надає цей екземпляр "
+"LabDiscoveryEngine."
 
 #: labdiscoveryengine/templates/default/index.html:50
 #: labdiscoveryengine/templates/default/login.html:36
@@ -65,6 +79,7 @@ msgid "Log in"
 msgstr "Увійти"
 
 #: labdiscoveryengine/templates/default/login.html:15
+#: labdiscoveryengine/views/admin.py:57
 msgid "Username"
 msgstr "Ім'я користувача"
 
@@ -87,12 +102,6 @@ msgstr "Вийти"
 #: labdiscoveryengine/templates/default/user/index.html:8
 msgid "You are not part of any group"
 msgstr "Ви не є частиною жодної групи"
-
-#: labdiscoveryengine/templates/default/user/index.html:32
-#: labdiscoveryengine/templates/default/user/index.html:62
-#: labdiscoveryengine/templates/default/user/index.html:79
-msgid "Access"
-msgstr "Доступ"
 
 #: labdiscoveryengine/templates/default/user/index.html:36
 #: labdiscoveryengine/templates/default/user/index.html:118
@@ -174,8 +183,8 @@ msgid ""
 "Here you can create student accounts, add them in groups, and allow those"
 " groups to use laboratories."
 msgstr ""
-"Тут ви можете створювати облікові записи студентів, додавати їх до груп та"
-" надавати цим групам доступ до лабораторій."
+"Тут ви можете створювати облікові записи студентів, додавати їх до груп "
+"та надавати цим групам доступ до лабораторій."
 
 #: labdiscoveryengine/templates/lde-admin/index.html:14
 #: labdiscoveryengine/templates/lde-admin/no-sqlalchemy.html:4
@@ -189,13 +198,6 @@ msgid ""
 " to the documentation to see how to add SQLAlchemy support:"
 msgstr ""
 
-#: labdiscoveryengine/templates/lde-admin/index.html:15
-#: labdiscoveryengine/templates/lde-admin/no-sqlalchemy.html:5
-msgid ""
-"If you want to be able to add students, groups and permissions, please go"
-" to the documentation to see how to add SQLAlchemy support:"
-msgstr "Якщо ви хочете мати можливість додавати студентів, групи та дозволи, будь ласка, зверніться до документації, щоб дізнатися, як додати підтримку SQLAlchemy:"
-
 #: labdiscoveryengine/templates/lde-admin/index.html:22
 msgid ""
 "You can also see when students used the laboratory by checking the User "
@@ -205,7 +207,7 @@ msgstr ""
 #: labdiscoveryengine/templates/lde-admin/index.html:24
 #: labdiscoveryengine/templates/lde-admin/no-pymongo.html:4
 msgid "No PyMongo configured"
-msgstr ""
+msgstr "PyMongo не налаштовано"
 
 #: labdiscoveryengine/templates/lde-admin/index.html:25
 #: labdiscoveryengine/templates/lde-admin/no-pymongo.html:5
@@ -215,11 +217,31 @@ msgid ""
 "support:"
 msgstr ""
 
-#: labdiscoveryengine/views/admin.py:82
+#: labdiscoveryengine/views/admin.py:58
+msgid "Full name"
+msgstr ""
+
+#: labdiscoveryengine/views/admin.py:59
+msgid "Groups"
+msgstr ""
+
+#: labdiscoveryengine/views/admin.py:60
+msgid "Last login"
+msgstr ""
+
+#: labdiscoveryengine/views/admin.py:61
+msgid "Created at"
+msgstr ""
+
+#: labdiscoveryengine/views/admin.py:62
+msgid "Updated at"
+msgstr ""
+
+#: labdiscoveryengine/views/admin.py:90
 msgid "Password is required"
 msgstr ""
 
-#: labdiscoveryengine/views/admin.py:98
+#: labdiscoveryengine/views/admin.py:106
 msgid "Passwords do not match"
 msgstr ""
 

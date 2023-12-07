@@ -3,7 +3,7 @@ from wtforms import fields, widgets, validators, form
 from flask import redirect, request, session, url_for
 from flask_admin import Admin, AdminIndexView
 from flask_admin.form.widgets import Select2Widget
-from flask_babel import gettext
+from flask_babel import gettext, lazy_gettext
 from flask_admin import Admin, expose, BaseView
 from flask_admin.contrib.sqla import ModelView
 from flask_admin.model.form import InlineFormAdmin
@@ -53,6 +53,14 @@ class NoSQLAlchemyView(AuthMixIn, BaseView):
 class UsersView(AuthMixIn, ModelView):
 
     column_list = ['login', 'full_name', 'groups', 'last_login', 'created_at', 'updated_at']
+    column_labels = {
+        "login": lazy_gettext("Username"),
+        "full_name": lazy_gettext("Full name"),
+        "groups": lazy_gettext("Groups"),
+        "last_login": lazy_gettext("Last login"),
+        "created_at": lazy_gettext("Created at"),
+        "updated_at": lazy_gettext("Updated at"),
+    }
 
     column_searchable_list = ['login', 'full_name']
     column_filters = ['login', 'full_name', 'last_login', 'created_at', 'updated_at', 'groups.name']
@@ -68,6 +76,12 @@ class UsersView(AuthMixIn, ModelView):
             'autofocus': 'autofocus'
         }
     }
+
+    def search_placeholder(self):
+        """
+        Avoid issues of Flask-Admin and search_placeholder
+        """
+        return gettext("Username or Full name")
 
     def create_form(self):
         form = super().create_form()
