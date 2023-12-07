@@ -17,6 +17,9 @@ class ReservationRequest(NamedTuple):
     max_time: float
     back_url: str
 
+    # Not used in external for example
+    group: Optional[str] = None
+
     # default priority. 1 is maximum priority, 10 is lowest priority
     priority: Optional[int] = 5
 

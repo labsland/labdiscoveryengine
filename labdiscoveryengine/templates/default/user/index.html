@@ -3,94 +3,104 @@
 {% block container %}
 
 <div class="col">
-    <!-- Set flexbox on the row -->
-    <div id="labAccordion" class="row d-flex flex-wrap">
-        {% for lab in laboratories %}
-            <div class="col-md-4 col-sm-6 mb-4">
-                <a name="lab-{{ lab.identifier }}"></a>
-                <!-- Add d-flex and flex-column on card -->
-                <div class="card h-100 d-flex flex-column">
-                    <div class="card-header bg-primary text-white" style="box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
-                        <h2 class="mb-0" style="font-size: 1.2em; font-weight: 600;">
-                            <img src="{{ lab.image }}" alt="{{ lab.display_name }} Icon" height="30" style="border: 2px solid white; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                            {{ lab.display_name }}
-                        </h2>
-                    </div>
-                    <!-- Add flex-grow-1 specifically to description -->
-                    <div class="card-body d-flex flex-column">
-                        <p class="flex-grow-1" style="font-size: 0.9em;">{{ lab.description }}</p>
-                        <div>
-                            <button data-laboratory="{{ lab.identifier }}" class="btn btn-primary btn-sm mb-2 access-btn lab-access-btn" style="font-weight: 600; border-radius: 15px;"><i class="fas fa-arrow-right icon-normal"></i><i class="fas fa-spin fa-spinner icon-spin" style="display: none"></i> <span>{{ gettext("Access") }}</span></button>
-                            <p id="message-lab-{{ lab.identifier }}" class="" style="font-size: 0.9em"></p>
-                        </div>
-                        <div class="mt-2">
-                            <a href="#" class="btn btn-link btn-sm toggle-keywords text-decoration-none" data-bs-toggle="collapse" data-bs-target="#keywords{{ loop.index }}"><i class="fas fa-tags"></i> <span>{{ gettext("Keywords") }}</span></a>
-                            <a href="#" class="btn btn-link btn-sm toggle-resources text-decoration-none" data-bs-toggle="collapse" data-bs-target="#resources{{ loop.index }}"><i class="fas fa-book"></i> <span>{{ gettext("Resources") }}</span></a>
-                            <a href="#" class="btn btn-link btn-sm toggle-features text-decoration-none" data-bs-toggle="collapse" data-bs-target="#features{{ loop.index }}"><i class="fas fa-book"></i> <span>{{ gettext("Features") }}</span></a>
-                        </div>
-                    </div>
+    {% if not groups %}
+        <div class="alert alert-warning text-center ">
+            <p>{{ gettext("You are not part of any group")}}</p>
+        </div>
+    {% endif %}
+    {% for group in groups %}
+        <h3>{{ group['name'] }}</h3>
+        <br>
 
-                    <!-- Keywords and Resources -->
-                    <div class="flex-grow-0 mx-2">
-                        <!-- Keywords -->
-                        <div class="collapse mt-2" id="keywords{{ loop.index }}">
-                            <h5 style="font-size: 0.8em;">{{ gettext("Keywords:") }}</h5>
-                            <ul>
-                                {% for keyword in lab.keywords|sort %}
-                                <li>{{ keyword }}</li>
+        <!-- Set flexbox on the row -->
+        <div id="labAccordion" class="row d-flex flex-wrap">
+            {% for lab in group['laboratories'] %}
+                <div class="col-md-4 col-sm-6 mb-4">
+                    <a name="lab-{{ lab.identifier }}"></a>
+                    <!-- Add d-flex and flex-column on card -->
+                    <div class="card h-100 d-flex flex-column">
+                        <div class="card-header bg-primary text-white" style="box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+                            <h2 class="mb-0" style="font-size: 1.2em; font-weight: 600;">
+                                <img src="{{ lab.image }}" alt="{{ lab.display_name }} Icon" height="30" style="border: 2px solid white; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                {{ lab.display_name }}
+                            </h2>
+                        </div>
+                        <!-- Add flex-grow-1 specifically to description -->
+                        <div class="card-body d-flex flex-column">
+                            <p class="flex-grow-1" style="font-size: 0.9em;">{{ lab.description }}</p>
+                            <div>
+                                <button data-laboratory="{{ lab.identifier }}" data-group="{{ group['name'] }}" class="btn btn-primary btn-sm mb-2 access-btn lab-access-btn" style="font-weight: 600; border-radius: 15px;"><i class="fas fa-arrow-right icon-normal"></i><i class="fas fa-spin fa-spinner icon-spin" style="display: none"></i> <span>{{ gettext("Access") }}</span></button>
+                                <p id="message-lab-{{ lab.identifier }}" class="" style="font-size: 0.9em"></p>
+                            </div>
+                            <div class="mt-2">
+                                <a href="#" class="btn btn-link btn-sm toggle-keywords text-decoration-none" data-bs-toggle="collapse" data-bs-target="#keywords{{ loop.index }}"><i class="fas fa-tags"></i> <span>{{ gettext("Keywords") }}</span></a>
+                                <a href="#" class="btn btn-link btn-sm toggle-resources text-decoration-none" data-bs-toggle="collapse" data-bs-target="#resources{{ loop.index }}"><i class="fas fa-book"></i> <span>{{ gettext("Resources") }}</span></a>
+                                <a href="#" class="btn btn-link btn-sm toggle-features text-decoration-none" data-bs-toggle="collapse" data-bs-target="#features{{ loop.index }}"><i class="fas fa-book"></i> <span>{{ gettext("Features") }}</span></a>
+                            </div>
+                        </div>
+
+                        <!-- Keywords and Resources -->
+                        <div class="flex-grow-0 mx-2">
+                            <!-- Keywords -->
+                            <div class="collapse mt-2" id="keywords{{ loop.index }}">
+                                <h5 style="font-size: 0.8em;">{{ gettext("Keywords:") }}</h5>
+                                <ul>
+                                    {% for keyword in lab.keywords|sort %}
+                                    <li>{{ keyword }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+
+                            <!-- Resources -->
+                            <div class="collapse mt-2" id="resources{{ loop.index }}">
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>{{ gettext("Resource") }}</th>
+                                                <th>{{ gettext("Features") }}</th>
+                                                <th>{{ gettext("Access") }}</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for resource in lab.resources|sort %}
+                                            <tr>
+                                                <td>{{ resource }}</td>
+                                                <td>
+                                                    {% if resources[resource].features %}
+                                                        {%- for feature in resources[resource].features|sort -%}
+                                                            {{ feature }}
+                                                            {%- if not loop.last %}, {% endif -%}
+                                                        {%- endfor -%}
+                                                        {% else %}
+                                                        {{ gettext("No feature") }}
+                                                    {% endif %}
+                                                </td>
+                                                <td><button data-laboratory="{{ lab.identifier }}" data-resource="{{ resource }}" data-group="{{ group['name'] }}" class="btn btn-secondary btn-sm access-btn resource-access-btn"><i class="fas fa-download icon-normal"></i><i class="fas fa-spin fa-spinner icon-spin" style="display: none"></i> <span>{{ gettext("Access") }}</span></button></td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- Features -->
+                            <div class="collapse mt-2" id="features{{ loop.index }}">
+                                <h5 style="font-size: 0.8em;">{{ gettext("Features:") }}</h5>
+                                
+                                {% for feature in lab.features|sort %}
+                                <div class="form-check form-check-inline">
+                                    <input data-feature="{{ feature }}" class="form-check-input" id="feature-{{ lab.identifier }}-{{ feature }}" name="features-{{ lab.identifier }}" type="checkbox">
+                                    <label class="form-check-label" for="feature-{{ lab.identifier }}-{{ feature }}">{{ feature }}</label>
+                                </div>
                                 {% endfor %}
-                            </ul>
-                        </div>
-
-                        <!-- Resources -->
-                        <div class="collapse mt-2" id="resources{{ loop.index }}">
-                            <div class="table-responsive">
-                                <table class="table table-sm">
-                                    <thead>
-                                        <tr>
-                                            <th>{{ gettext("Resource") }}</th>
-                                            <th>{{ gettext("Features") }}</th>
-                                            <th>{{ gettext("Access") }}</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for resource in lab.resources|sort %}
-                                        <tr>
-                                            <td>{{ resource }}</td>
-                                            <td>
-                                                {% if resources[resource].features %}
-                                                    {%- for feature in resources[resource].features|sort -%}
-                                                        {{ feature }}
-                                                        {%- if not loop.last %}, {% endif -%}
-                                                    {%- endfor -%}
-                                                    {% else %}
-                                                    {{ gettext("No feature") }}
-                                                {% endif %}
-                                            </td>
-                                            <td><button data-laboratory="{{ lab.identifier }}" data-resource="{{ resource }}" class="btn btn-secondary btn-sm access-btn resource-access-btn"><i class="fas fa-download icon-normal"></i><i class="fas fa-spin fa-spinner icon-spin" style="display: none"></i> <span>{{ gettext("Access") }}</span></button></td>
-                                        </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
                             </div>
-                        </div>
-
-                        <!-- Features -->
-                        <div class="collapse mt-2" id="features{{ loop.index }}">
-                            <h5 style="font-size: 0.8em;">{{ gettext("Features:") }}</h5>
-                            
-                            {% for feature in lab.features|sort %}
-                            <div class="form-check form-check-inline">
-                                <input data-feature="{{ feature }}" class="form-check-input" id="feature-{{ lab.identifier }}-{{ feature }}" name="features-{{ lab.identifier }}" type="checkbox">
-                                <label class="form-check-label" for="feature-{{ lab.identifier }}-{{ feature }}">{{ feature }}</label>
-                            </div>
-                            {% endfor %}
                         </div>
                     </div>
                 </div>
-            </div>
-        {% endfor %}
-    </div>
+            {% endfor %}
+        </div>
+    {% endfor %}
 </div>
 {% endblock %}
 
@@ -209,6 +219,8 @@
 
             var laboratory = $(this).data("laboratory");
             var resource = $(this).data("resource");
+            var group = $(this).data("group");
+
             var features = [];
             $("input[name='features-" + laboratory + "']").each(function() {
                 if ($(this).is(":checked")) {
@@ -217,7 +229,8 @@
             });
 
             var requestData = {
-                laboratory: laboratory
+                laboratory: laboratory,
+                group: group
             };
             if (resource) {
                 requestData['resources'] = [ resource ];

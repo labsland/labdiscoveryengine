@@ -26,9 +26,9 @@
                     <i class="fas fa-rocket fa-2x"></i>
                 </div>
                 <div class="card-body">
-                    <h5 class="card-title">Learn about LabDiscoveryEngine</h5>
-                    <p class="card-text">Explore the main website to find out more about Lab Discovery Engine.</p>
-                    <a href="https://labdiscoveryengine.labsland.com" class="btn btn-secondary">Learn More</a>
+                    <h5 class="card-title">{{ gettext("Learn about LabDiscoveryEngine") }}</h5>
+                    <p class="card-text">{{ gettext("Explore the main website to find out more about Lab Discovery Engine.") }}</p>
+                    <a href="https://labdiscoveryengine.labsland.com" class="btn btn-secondary">{{ gettext("Learn More") }}</a>
                 </div>
             </div>
         </div>
@@ -40,14 +40,14 @@
                     <i class="fas fa-user-lock fa-2x"></i>
                 </div>
                 <div class="card-body">
-                    <h5 class="card-title">Access Laboratories</h5>
+                    <h5 class="card-title">{{ gettext("Access Laboratories") }}</h5>
 
                     {% if username %}
-                        <p class="card-text">Access the labs provided by this LabDiscoveryEngine instance.</p>
+                        <p class="card-text">{{ gettext("Access the labs provided by this LabDiscoveryEngine instance.") }}</p>
                         <a href="{{ url_for('user.index') }}" class="btn btn-primary">Access</a>
                     {% else %}
-                        <p class="card-text">Login to access the labs provided by this LabDiscoveryEngine instance.</p>
-                        <a href="{{ url_for('login.login') }}" class="btn btn-primary">Login</a>
+                        <p class="card-text">{{ gettext("Login to access the labs provided by this LabDiscoveryEngine instance.") }}</p>
+                        <a href="{{ url_for('login.login') }}" class="btn btn-primary">{{ gettext("Sign in") }}</a>
                     {% endif %}
 
                 </div>
@@ -61,9 +61,9 @@
                     <i class="fas fa-flask fa-2x"></i>
                 </div>
                 <div class="card-body">
-                    <h5 class="card-title">Published Laboratories List</h5>
-                    <p class="card-text">Explore the labs offered by this instance.</p>
-                    <a href="{{ url_for('public.index') }}" class="btn btn-info">View Labs</a>
+                    <h5 class="card-title">{{ gettext("Published Laboratories List") }}</h5>
+                    <p class="card-text">{{ gettext("Explore the labs offered by this instance.") }}</p>
+                    <a href="{{ url_for('public.index') }}" class="btn btn-info">{{ gettext("View labs")}}</a>
                 </div>
             </div>
         </div>

@@ -8,8 +8,10 @@ from wtforms import SubmitField
 from wtforms import BooleanField
 from wtforms.validators import DataRequired
 
+from labdiscoveryengine import db
+from labdiscoveryengine.models import User
 from labdiscoveryengine.views.utils import render_themed_template
-from labdiscoveryengine.utils import lde_config
+from labdiscoveryengine.utils import lde_config, is_sql_active
 
 login_blueprint = Blueprint('login', __name__)
 
@@ -48,8 +50,12 @@ def login():
     # If we are already logged in we redirect to the labs screen.
     username = session.get('username')
     role = session.get('role')
+    url = request.args.get('url')
+    if not url or not url.startswith('/'):
+        url = url_for('user.index')
+
     if username is not None and role is not None:
-        return redirect(url_for('user.index'))
+        return redirect(url)
 
     form = LoginForm()
     if request.method == 'POST':
@@ -61,13 +67,26 @@ def login():
                 if lde_config.administrators[username].check_password_hash(password):
                     session['username'] = form.username.data
                     session['role'] = 'admin'
-                    return redirect(url_for('user.index'))
+                    session['is_db'] = False
+                    return redirect(url)
                 
             if username in lde_config.external_users:
                 if lde_config.external_users[username].check_password_hash(password):
                     session['username'] = form.username.data
                     session['role'] = 'external'
-                    return redirect(url_for('user.index'))
+                    session['is_db'] = False
+                    return redirect(url)
+            
+            if is_sql_active():
+                user = db.session.query(User).filter(User.login == username).first()
+                if user is not None:
+                    if user.check_password(password):
+                        session['username'] = form.username.data
+                        # It would be possible to allow additional admins in the database
+                        # To be decided
+                        session['role'] = 'student'
+                        session['is_db'] = True
+                        return redirect(url)
                 
             form.username.errors.append(gettext("Invalid username or password"))
     

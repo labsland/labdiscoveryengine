@@ -17,6 +17,7 @@ User's guide
 
    quickstart
    configuration
+   installation_next_steps
    license
 
 

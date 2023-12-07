@@ -20,6 +20,13 @@ class Config:
     
     DEBUG_TB_INTERCEPT_REDIRECTS = False
 
+    SQLALCHEMY_DATABASE_URI: Optional[str] = os.environ.get('SQLALCHEMY_DATABASE_URI')
+    MONGO_URI: Optional[str] = os.environ.get('MONGO_URI')
+
+    # These two variables are set on the create_app depening on whether we have SQLALCHEMY_DATABASE_URI or MONGO_URI or not
+    USING_MONGO = None
+    USING_SQLALCHEMY = None
+
 class DevelopmentConfig(Config):
     DEBUG = True
     LABDISCOVERYENGINE_DIRECTORY: str = os.environ.get('LABDISCOVERYENGINE_DIRECTORY') or 'tests/deployments/simple'

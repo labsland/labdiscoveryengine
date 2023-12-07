@@ -6,8 +6,8 @@
 # DEFAULT_RESOURCE_PASSWORD: lde # If you have the same password in all the laboratories
 # 
 # REDIS_URL: redis://localhost:6379/0
-# MONGO_URL: mongodb://localhost:27017/lde
-# MYSQL_DATABASE_URL: mysql+pymysql://lde:password@localhost:3306/lde # Optional
+MONGO_URI: mongodb://localhost:27017/lde
+SQLALCHEMY_DATABASE_URI: mysql+pymysql://lde:ldepassword@localhost:3306/lde # Optional
 SECRET_KEY: ivTp3UApt7epzy0YzlNOEGirzKe1gHC4JQJc_rcuS2s
 DEFAULT_LAB_VISIBILITY: public # public or private
 

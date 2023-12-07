@@ -1,4 +1,3 @@
-
 Configuration
 ==============
 
@@ -16,13 +15,13 @@ for its readability and ease of use, and it is somewhat similar to JSON. The
 configuration system is designed to be simple for laboratory developers and
 administrators to use.
 
-An example of a configuration set can be found in the `tests\deployments\simple`
+An example of a configuration set can be found in the `tests/deployments/simple`
 directory.
 
 In the following sections we will describe the various configuration files.
 
-Configuration.yml
-------------------
+configuration.yml
+~~~~~~~~~~~~~~~~~
 
 The `configuration.yml` file contains the main configuration of the LabDiscoveryEngine
 instance.
@@ -65,8 +64,8 @@ The main variables are the following:
 
 
 
-Credentials.yml
-----------------
+credentials.yml
+~~~~~~~~~~~~~~~
 
 The `credentials.yml` file contains the credentials for administrator and external users.
 
@@ -83,8 +82,8 @@ to set and change passwords. The tool can be invoked through:
 ```lde credentials administrators change-password```.
 
 
-Laboratories.yml
-----------------
+laboratories.yml
+~~~~~~~~~~~~~~~~
 
 The ``laboratories.yml`` file contains the configuration of the laboratories that
 are provided by the instance. Each laboratory is defined by a unique identifier
@@ -135,8 +134,8 @@ Then, various parameters:
 
 
 
-Resources.yml
-----------------
+resources.yml
+~~~~~~~~~~~~~
 
 The ``resources.yml`` file contains the resources that provide the laboratories.
 A ``resource`` represents an instance of a laboratory. A laboratory may have
@@ -148,11 +147,11 @@ An example of a resource is:
 
 .. code-block:: yaml
 
-orgchem-1:
-  url: http://localhost:5100
-  login: lde
-  password: password
-  features: ['feature2', 'feature4']
+    orgchem-1:
+      url: http://localhost:5100
+      login: lde
+      password: password
+      features: ['feature2', 'feature4']
 
 
 A resource is first identified by a unique identifier. In this case 'orgchem-1'.
@@ -168,21 +167,10 @@ Then, various parameters:
    * - Variable
      - Description
    * - ``url``
-     - The URL, often local, in which this laboratory is hosted. The labs are normally hosted separately
-using the LabDiscoveryLib.
+     - The URL, often local, in which this laboratory is hosted. The labs are normally hosted separately using the LabDiscoveryLib.
    * - ``login``
-     - This is the internal login that will be used by the LabDiscoveryEngine to communicate with the
-       resource. It is not the login that will be used by users. This login and its password
-       should be secret and shared only between the LabDiscoveryEngine and the resource (the laboratory).
+     - This is the internal login that will be used by the LabDiscoveryEngine to communicate with the resource. It is not the login that will be used by users. This login and its password should be secret and shared only between the LabDiscoveryEngine and the resource (the laboratory).
    * - ``password``
      - Internal password for the specified login.
    * - ``features``
-     - List of feature identifiers supported by this resource. Features are specific characteristics
-     that are not necessarily supported by all instances (resources) of a laboratory. The ones that this resource
-     supports are specified here. An example is a FPGA laboratory for which there are some resources (lab instances) with an
-     oscilloscope attached and some without. The ones with the oscilloscope would have an 'oscilloscope' feature specified.
-
-
-
-
-
+     - List of feature identifiers supported by this resource. Features are specific characteristics that are not necessarily supported by all instances (resources) of a laboratory. The ones that this resource supports are specified here. An example is a FPGA laboratory for which there are some resources (lab instances) with an oscilloscope attached and some without. The ones with the oscilloscope would have an 'oscilloscope' feature specified.

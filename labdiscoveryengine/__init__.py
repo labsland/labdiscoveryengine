@@ -5,7 +5,10 @@ from flask import Flask, has_request_context, request, session
 
 import yaml
 from flask_babel import Babel
-from flask_assets import Environment, Bundle
+from flask_assets import Environment
+from flask_pymongo import PyMongo
+from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
 
 from labdiscoveryengine.scheduling.sync.web_api import initialize_web
 
@@ -16,6 +19,13 @@ except ImportError:
 
 babel = Babel()
 environment = Environment()
+
+# We will not initialize mongo if we don't have mongo configured
+mongo = PyMongo()
+# We will not initialize mongo if we don't have SQLAlchemy configured
+db = SQLAlchemy()
+migrate = Migrate()
+
 if DebugToolbarExtension is not None:
     toolbar = DebugToolbarExtension()
 else:
@@ -64,6 +74,19 @@ def create_app(config_name: Optional[str] = None):
     babel.init_app(app, locale_selector=get_locale)
     environment.init_app(app)
 
+    if app.config.get('SQLALCHEMY_DATABASE_URI'):
+        app.config['USING_SQLALCHEMY'] = True
+        db.init_app(app)
+        migrate.init_app(app, db, directory='labdiscoveryengine/migrations')
+    else:
+        app.config['USING_SQLALCHEMY'] = False
+
+    if app.config.get('MONGO_URI'):
+        app.config['USING_MONGO'] = True
+        mongo.init_app(app)
+    else:
+        app.config['USING_MONGO'] = False
+
     if toolbar is not None:
         toolbar.init_app(app)
 
@@ -74,6 +97,10 @@ def create_app(config_name: Optional[str] = None):
     from .views.login import login_blueprint
     from .views.external import external_v1_blueprint
     from .views.public import public_blueprint
+    from .views.admin import create_admin
+
+    admin = create_admin(app)
+    admin.init_app(app)
 
     app.register_blueprint(login_blueprint)
     app.register_blueprint(user_blueprint, url_prefix='/user')

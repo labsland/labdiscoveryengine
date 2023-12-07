@@ -12,6 +12,8 @@ import logging
 from typing import Callable, Dict, Optional
 
 import click
+from alembic import command as alembic_command
+from flask_migrate import Config as MigrationConfig
 
 import labdiscoveryengine
 from labdiscoveryengine import create_app
@@ -369,6 +371,33 @@ def deployments_add_supervisor(directory: str, force: bool, name: str, user: str
     print(f"[{time.asctime()}] # supervisorctl status {name}:{name}-gunicorn")
     print(f"[{time.asctime()}] # supervisorctl status {name}:{name}-worker")
     print(f"[{time.asctime()}]")
+
+@deployments.group('db')
+def deployments_db():
+    """
+    Manage the database migrations
+    """
+
+@deployments_db.command('upgrade')
+@click.option('--revision', default='head', type=str, help="Revision to upgrade to")
+@click.option('--sql', default=False, is_flag=True, type=bool, help="Show SQL code instead")
+@click.option('--tag', default=None, type=str, help="Revision to a tag")
+@with_app
+def upgrade(revision: str, sql=False, tag=None):
+    """
+    Upgrade the database to the latest models
+    """
+    if not os.path.exists('configuration.yml'):
+        print("Error: configuration.yml file not found. Are you in a LDE directory?")
+        return
+    migrate_directory = os.path.join(os.path.dirname(__file__), 'migrations')
+
+    config = MigrationConfig(os.path.join(migrate_directory, 'alembic.ini'))
+    config.set_main_option('script_location', migrate_directory)
+    template = 'flask'
+
+    alembic_command.upgrade(config, revision, sql=sql, tag=tag)
+
 
 @lde.group('credentials')
 def credentials_group():

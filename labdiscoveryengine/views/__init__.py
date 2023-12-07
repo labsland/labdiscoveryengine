@@ -1,3 +1,1 @@
-from flask import app
-
-
+# so find_packages() finds this package

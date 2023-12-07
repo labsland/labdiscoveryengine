@@ -9,11 +9,11 @@
             {{ gettext("Log in") }}
             </h1>
 
-            <form method="POST" action="{{ url_for('.login') }}">
+            <form method="POST" action="{{ url_for('.login', **request.args) }}">
                 {{ form.csrf_token }}
                 <div class="mb-3">
                     <label for="username" class="form-label">{{ gettext("Username") }}</label>
-                    <input class="form-control" name="{{ form.username.id }}">
+                    <input class="form-control" name="{{ form.username.id }}" autofocus>
                     {% if form.username.errors %}
                         <div class="alert alert-danger mt-2">
                         {% for error in form.username.errors %}

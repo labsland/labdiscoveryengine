@@ -7,14 +7,18 @@
     <!-- Logged-in Header -->
     <div class="container mb-5">
         <div class="d-flex justify-content-end align-items-center bg-light p-2">
-            <span class="me-3">Logged in as <strong>{{ username }}</strong></span>
+            <span class="me-3">{{ gettext("Logged in as") }} <strong>{{ username }}</strong></span>
+            {% if g.role == 'admin' %}
+                <a style="margin-right: 1em" class="btn btn-sm btn-outline-secondary" href="{{ url_for('admin.index') }}"><i class="fas fa-gear"></i>&nbsp;{{ gettext("Administration panel") }}</a> 
+            {% endif %}
             <form action="{{ url_for('login.logout') }}" method="post">
                 {{ logout_form.hidden_tag() }}
                 <button type="submit" class="btn btn-outline-secondary btn-sm">
-                    <i class="fas fa-sign-out-alt"></i> Logout
+                    <i class="fas fa-sign-out-alt"></i> {{ gettext("Log out") }}
                 </button>
             </form>
         </div>
+
     </div>
 
 {% endblock %}
