@@ -66,7 +66,7 @@ class CustomInstallCommand(install):
         super().run()
 
 setup(name='labdiscoveryengine',
-      version='0.0.1',
+      version='0.6.0',
       description="Remote Laboratory Management System for creating laboratories (replacement of WebLab-Deusto)",
       long_description=long_description,
       long_description_content_type="text/markdown",
