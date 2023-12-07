@@ -1,0 +1,32 @@
+{% extends 'admin/master.html' %}
+{% block body %}
+
+    <p>
+        <a href="{{ url_for('user.index') }}" class="btn btn-sm btn-primary"><i class="glyphicon glyphicon-chevron-left"></i>{{ gettext("Back to the labs") }}</a>
+    </p>
+
+    <h2>{{ gettext("Welcome to the administration panel") }}</h2>
+    <br>
+
+    {% if sql_active %}
+        <p class="lead">{{ gettext("Here you can create student accounts, add them in groups, and allow those groups to use laboratories.") }}</p>
+    {% else %}
+        <h3>{{ gettext("No SQLAlchemy configured") }}</h3>
+        <p>{{ gettext("If you want to be able to add students, groups and permissions, please go to the documentation to see how to add SQLAlchemy support:") }}</p>
+        <ul>
+            <li><a href="https://developers.labsland.com/labdiscoveryengine/en/stable/installation_next_steps.html" target="_blank">https://developers.labsland.com/labdiscoveryengine/en/stable/installation_next_steps.html</a></li>
+        </ul>
+    {% endif %}
+
+    {% if mongo_active %}
+        <p class="lead">{{ gettext("You can also see when students used the laboratory by checking the User sessions.") }}</p>
+    {% else %}
+        <h3>{{ gettext("No PyMongo configured") }}</h3>
+        <p>{{ gettext("If you want to be able to store user sessions to know who used when each laboratory, please go to the documentation to see how to add PyMongo support:") }}</p>
+        <ul>
+            <li><a href="https://developers.labsland.com/labdiscoveryengine/en/stable/installation_next_steps.html" target="_blank">https://developers.labsland.com/labdiscoveryengine/en/stable/installation_next_steps.html</a></li>
+        </ul>
+    {% endif %}
+
+
+{% endblock %}

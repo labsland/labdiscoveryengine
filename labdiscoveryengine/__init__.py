@@ -10,8 +10,6 @@ from flask_pymongo import PyMongo
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 
-from labdiscoveryengine.scheduling.sync.web_api import initialize_web
-
 try:
     from flask_debugtoolbar import DebugToolbarExtension
 except ImportError:
@@ -47,6 +45,8 @@ def running_mode() -> str:
             return 'worker'
     
     return 'web'
+
+from labdiscoveryengine.scheduling.sync.web_api import initialize_web
 
 def create_app(config_name: Optional[str] = None):
     if config_name is None:

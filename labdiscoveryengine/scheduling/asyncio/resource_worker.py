@@ -7,6 +7,7 @@ import logging
 
 from typing import Optional
 from labdiscoveryengine.data import Resource
+from labdiscoveryengine.scheduling.asyncio.mongodb import initialize_mongodb
 from labdiscoveryengine.scheduling.asyncio.processor import ResourceReservationProcessor
 from labdiscoveryengine.scheduling.asyncio.redis import initialize_redis, aioredis_store
 
@@ -25,6 +26,7 @@ async def initialize_worker():
     Initialize worker
     """
     await initialize_redis()
+    await initialize_mongodb()
 
 class ResourceWorker:
     """

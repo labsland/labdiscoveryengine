@@ -1,10 +1,11 @@
 import secrets
 from typing import List, Optional
 from flask import Blueprint, jsonify, g, request
-from labdiscoveryengine.scheduling.data import ReservationRequest, ReservationStatus
-from labdiscoveryengine.scheduling.sync.web_api import add_reservation, cancel_reservation, get_reservation_status
 
 from labdiscoveryengine.utils import lde_config
+
+from labdiscoveryengine.scheduling.data import ReservationRequest, ReservationStatus
+from labdiscoveryengine.scheduling.sync.web_api import add_reservation, cancel_reservation, get_reservation_status
 
 external_v1_blueprint = Blueprint('external', __name__)
 
@@ -98,6 +99,7 @@ def reservations():
 
         reservation_request = ReservationRequest(
             identifier=secrets.token_urlsafe(),
+            group=None,
             laboratory=laboratory,
             resources=resources,
             features=features,

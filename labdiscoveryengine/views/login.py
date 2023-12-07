@@ -99,7 +99,7 @@ def logout():
     if form.validate_on_submit():
         session.pop('username', None)
         session.pop('role', None)
-        flash('You have been logged out.')
+        # flash('You have been logged out.')
         return redirect(url_for('login.login'))
     else:
         flash('Logout failed. CSRF check failed.')

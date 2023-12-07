@@ -1,7 +1,7 @@
 import hashlib
 from wtforms import fields, widgets, validators, form
 from flask import redirect, request, session, url_for
-from flask_admin import Admin
+from flask_admin import Admin, AdminIndexView
 from flask_admin.form.widgets import Select2Widget
 from flask_babel import gettext
 from flask_admin import Admin, expose, BaseView
@@ -22,7 +22,7 @@ class AuthMixIn:
         if session.get('role') is None:
             return redirect(url_for('login.login', url=request.full_path))
         
-        return "Only admins can use the admin panel"
+        return "Only admins can use the administration panel"
 
     def render(self, template, **kwargs):
         """
@@ -32,6 +32,13 @@ class AuthMixIn:
         self.extra_js = []
 
         return super().render(template, **kwargs)
+    
+class MainIndexView(AuthMixIn, AdminIndexView):
+    @expose('/')
+    def index(self):
+        mongo_active = is_mongo_active()
+        sql_active = is_sql_active()
+        return self.render('lde-admin/index.html', mongo_active=mongo_active, sql_active=sql_active)
 
 class NoPyMongoView(AuthMixIn, BaseView):
     @expose('/')
@@ -179,7 +186,7 @@ class UserSessionForm(form.Form):
     pass
 
 class UserSessionsView(AuthMixIn, flask_admin_pymongo.ModelView):
-    column_list = ['user', 'start', 'min_end', 'max_end', 'min_duration', 'max_duration', 'laboratory', 'resource', 'group']
+    column_list = ['user', 'user_role', 'group', 'laboratory', 'assigned_resource', 'start_reservation', 'max_duration', 'queue_duration']
 
     can_create = False
     can_edit = False
@@ -189,7 +196,7 @@ class UserSessionsView(AuthMixIn, flask_admin_pymongo.ModelView):
 
 
 def create_admin(app) -> Admin:
-    admin = Admin(name='LabDiscoveryEngine', template_mode='bootstrap3')
+    admin = Admin(name='LabDiscoveryEngine', index_view=MainIndexView(), template_mode='bootstrap3')
 
     if is_sql_active(app):
         admin.add_view(UsersView(User, db.session, name='Users', endpoint="users", url='/admin/users'))

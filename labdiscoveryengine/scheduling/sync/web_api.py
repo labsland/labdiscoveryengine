@@ -2,6 +2,7 @@
 Methods that should be called from the web interface (not running in asyncio, and not using asyncio libraries)
 """
 
+import datetime
 import json
 import time
 from typing import List, Dict, Optional
@@ -10,11 +11,12 @@ from flask import Flask
 from flask_redis import FlaskRedis
 
 from labdiscoveryengine.scheduling.keys import ReservationKeys, UserKeys
+from labdiscoveryengine import mongo
 
 from ..data import ReservationRequest, ReservationStatus
 from ..redis_scripts import ScriptNames, SCRIPT_FILES
 
-from labdiscoveryengine.utils import lde_config
+from labdiscoveryengine.utils import is_mongo_active, lde_config
 
 redis_store = FlaskRedis(decode_responses=True)
 
@@ -102,6 +104,27 @@ def add_reservation(reservation_request: ReservationRequest) -> ReservationStatu
 
         for resource_name in resources_to_remove:
             reservation_request.resources.remove(resource_name)
+
+    if is_mongo_active():
+        mongo.db.sessions.insert_one({
+            "reservation_id": reservation_request.identifier,
+            "user": reservation_request.user_identifier,
+            "user_role": reservation_request.user_role,
+            "group": reservation_request.group,
+            "laboratory": reservation_request.laboratory,
+            "resources": reservation_request.resources,
+            "assigned_resource": None,
+            "features": reservation_request.features,
+            "priority": reservation_request.priority,
+            "start_reservation": datetime.datetime.now(datetime.timezone.utc),
+            "start": None,
+            "min_end": None,
+            "max_end": None,
+            "queue_duration": None,
+            "min_duration": None,
+            "max_duration": None,
+            "end_reservation": None,
+        })
 
     sync_lua_scripts.store_reservation(reservation_request)
     return sync_lua_scripts.get_reservation_status(reservation_request.identifier)

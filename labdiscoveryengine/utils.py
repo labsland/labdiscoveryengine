@@ -2,6 +2,7 @@ import re
 import asyncio
 from functools import wraps
 from unicodedata import normalize
+import motor
 
 from werkzeug.local import LocalProxy
 from flask import current_app
@@ -100,7 +101,9 @@ def create_proxied_instance(klass: type):
             attr = getattr(self._obj, name)
 
             # Create and cache the appropriate wrapper
-            if asyncio.iscoroutinefunction(attr):
+            if isinstance(attr, motor.motor_asyncio.AsyncIOMotorCollection):
+                return attr
+            elif asyncio.iscoroutinefunction(attr):
                 wrapper = self._create_async_wrapper(attr)
             elif callable(attr):
                 wrapper = self._create_sync_wrapper(attr)
