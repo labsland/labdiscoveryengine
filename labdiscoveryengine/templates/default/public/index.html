@@ -18,8 +18,8 @@
                     <div class="card-body d-flex flex-column">
                         <p class="flex-grow-1" style="font-size: 0.9em;">{{ lab.description }}</p>
                         <div class="mt-2">
-                            <a href="#" class="btn btn-link btn-sm toggle-keywords text-decoration-none" data-bs-toggle="collapse" data-bs-target="#keywords{{ loop.index }}"><i class="fas fa-tags"></i> <span>Keywords</span></a>
-                            <a href="#" class="btn btn-link btn-sm toggle-resources text-decoration-none" data-bs-toggle="collapse" data-bs-target="#resources{{ loop.index }}"><i class="fas fa-book"></i> <span>Resources</span></a>
+                            <a href="#" class="btn btn-link btn-sm toggle-keywords text-decoration-none" data-bs-toggle="collapse" data-bs-target="#keywords{{ loop.index }}"><i class="fas fa-tags"></i> <span>{{ gettext("Keywords") }}</span></a>
+                            <a href="#" class="btn btn-link btn-sm toggle-resources text-decoration-none" data-bs-toggle="collapse" data-bs-target="#resources{{ loop.index }}"><i class="fas fa-book"></i> <span>{{ gettext("Resources" )}}</span></a>
                         </div>
                     </div>
 
@@ -27,7 +27,7 @@
                     <div class="flex-grow-0 mx-2">
                         <!-- Keywords -->
                         <div class="collapse mt-2" id="keywords{{ loop.index }}">
-                            <h5 style="font-size: 0.8em;">Keywords:</h5>
+                            <h5 style="font-size: 0.8em;">{{ gettext("Keywords") }}:</h5>
                             <ul>
                                 {% for keyword in lab.keywords %}
                                 <li>{{ keyword }}</li>
@@ -40,7 +40,7 @@
                                 <table class="table table-sm">
                                     <thead>
                                         <tr>
-                                            <th>Resource</th>
+                                            <th>{{ gettext("Resource") }}</th>
                                         </tr>
                                     </thead>
                                     <tbody>

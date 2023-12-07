@@ -60,6 +60,7 @@ class UsersView(AuthMixIn, ModelView):
         "last_login": lazy_gettext("Last login"),
         "created_at": lazy_gettext("Created at"),
         "updated_at": lazy_gettext("Updated at"),
+        "groups.name": lazy_gettext("Group name")
     }
 
     column_searchable_list = ['login', 'full_name']
@@ -144,7 +145,7 @@ class GroupsView(AuthMixIn, ModelView):
     form_columns = ['name', 'users', 'permissions2']
 
     form_extra_fields = {
-        'permissions2': Select2MultipleField('Permissions')
+        'permissions2': Select2MultipleField(lazy_gettext("Laboratories"))
     }
 
     form_widget_args = {
@@ -152,6 +153,22 @@ class GroupsView(AuthMixIn, ModelView):
             'autofocus': 'autofocus'
         }
     }
+
+    column_labels = {
+        "name": lazy_gettext("Name"),
+        "created_at": lazy_gettext("Created at"),
+        "updated_at": lazy_gettext("Updated at"),
+        "permissions": lazy_gettext("Laboratories"),
+        "users.login": lazy_gettext("Username"),
+        "users.full_name": lazy_gettext("User full name"),
+        "permissions.laboratory": lazy_gettext("Laboratory"),
+    }
+
+    def search_placeholder(self):
+        """
+        Avoid issues of Flask-Admin and search_placeholder
+        """
+        return gettext("Name")
 
     def on_form_prefill(self, form, id):
         form.permissions2.choices = get_laboratories_list()
@@ -199,8 +216,70 @@ class GroupsView(AuthMixIn, ModelView):
 class UserSessionForm(form.Form):  
     pass
 
+class MongoDateTimeEqualFilter(flask_admin_pymongo.filters.FilterEqual, filters.BaseDateTimeFilter):
+    def apply(self, query, value):
+        query.append({self.column: value})
+        return query
+
+class MongoDateTimeGreaterFilter(flask_admin_pymongo.filters.FilterGreater, filters.BaseDateTimeFilter):
+    def apply(self, query, value):
+        query.append({self.column: {'$gt': value}})
+        return query
+
+class MongoDateTimeSmallerFilter(flask_admin_pymongo.filters.FilterSmaller, filters.BaseDateTimeFilter):
+    def apply(self, query, value):
+        query.append({self.column: {'$lt': value}})
+        return query
+
 class UserSessionsView(AuthMixIn, flask_admin_pymongo.ModelView):
     column_list = ['user', 'user_role', 'group', 'laboratory', 'assigned_resource', 'start_reservation', 'max_duration', 'queue_duration']
+
+    column_searchable_list = ['user', 'group', 'laboratory', 'assigned_resource', 'reservation_id']
+    column_sortable_list = ['user', 'group', 'laboratory', 'assigned_resource', 'start_reservation', 'max_duration', 'queue_duration']
+    column_default_sort = ('start_reservation', True)
+
+    column_labels = {
+        "user": lazy_gettext("User"),
+        "user_role": lazy_gettext("User role"),
+        "group": lazy_gettext("Group"),
+        "laboratory": lazy_gettext("Laboratory"),
+        "assigned_resource": lazy_gettext("Assigned resource"),
+        "start_reservation": lazy_gettext("Start reservation"),
+        "max_duration": lazy_gettext("Maximum duration"),
+        "queue_duration": lazy_gettext("Queue duration"),
+    }
+
+    column_filters = [
+        flask_admin_pymongo.filters.FilterEqual('reservation_id', lazy_gettext("Reservation identifier")),
+
+        flask_admin_pymongo.filters.FilterEqual('user', lazy_gettext("User")),
+        flask_admin_pymongo.filters.FilterLike('user', lazy_gettext("User")),
+
+        flask_admin_pymongo.filters.FilterEqual('user_role', lazy_gettext("User role")),
+
+        flask_admin_pymongo.filters.FilterEqual('group', lazy_gettext("Group")),
+        flask_admin_pymongo.filters.FilterLike('group', lazy_gettext("Group")),
+        
+        flask_admin_pymongo.filters.FilterEqual('laboratory', lazy_gettext("Laboratory")),
+        flask_admin_pymongo.filters.FilterLike('laboratory', lazy_gettext("Laboratory")),
+        
+        flask_admin_pymongo.filters.FilterEqual('assigned_resource', lazy_gettext("Assigned resource")),
+        flask_admin_pymongo.filters.FilterLike('assigned_resource', lazy_gettext("Assigned resource")),
+        
+        MongoDateTimeEqualFilter('start_reservation', lazy_gettext('Start reservation')),
+        MongoDateTimeGreaterFilter('start_reservation', lazy_gettext('Start reservation')),
+        MongoDateTimeSmallerFilter('start_reservation', lazy_gettext('Start reservation')),
+
+        flask_admin_pymongo.filters.FilterEqual('max_duration', lazy_gettext('Maximum duration')),
+        flask_admin_pymongo.filters.FilterLike('max_duration', lazy_gettext('Maximum duration')),
+
+        flask_admin_pymongo.filters.FilterEqual('min_duration', lazy_gettext('Minimum duration')),
+        flask_admin_pymongo.filters.FilterLike('min_duration', lazy_gettext('Minimum duration')),
+
+        flask_admin_pymongo.filters.FilterEqual('queue_duration', lazy_gettext('Queue duration')),
+        flask_admin_pymongo.filters.FilterLike('queue_duration', lazy_gettext('Queue duration')),
+    ]
+
 
     can_create = False
     can_edit = False
@@ -213,15 +292,15 @@ def create_admin(app) -> Admin:
     admin = Admin(name='LabDiscoveryEngine', index_view=MainIndexView(), template_mode='bootstrap3')
 
     if is_sql_active(app):
-        admin.add_view(UsersView(User, db.session, name='Users', endpoint="users", url='/admin/users'))
-        admin.add_view(GroupsView(Group, db.session, name='Groups', endpoint="groups", url='/admin/groups'))
+        admin.add_view(UsersView(User, db.session, name=lazy_gettext("Users"), endpoint="users", url='/admin/users'))
+        admin.add_view(GroupsView(Group, db.session, name=lazy_gettext("Groups"), endpoint="groups", url='/admin/groups'))
     else:
-        admin.add_view(NoSQLAlchemyView(name='Users', url='/admin/users', endpoint="users"))
-        admin.add_view(NoSQLAlchemyView(name='Groups', url='/admin/groups', endpoint="groups"))
+        admin.add_view(NoSQLAlchemyView(name=lazy_gettext("Users"), url='/admin/users', endpoint="users"))
+        admin.add_view(NoSQLAlchemyView(name=lazy_gettext("Groups"), url='/admin/groups', endpoint="groups"))
 
     if is_mongo_active(app):
-        admin.add_view(UserSessionsView(mongo.db.sessions, name='User sessions', url="/admin/users/sessions", endpoint="user_sessions"))
+        admin.add_view(UserSessionsView(mongo.db.sessions, name=lazy_gettext("User sessions"), url="/admin/users/sessions", endpoint="user_sessions"))
     else:
-        admin.add_view(NoPyMongoView(name='User sessions', url="/admin/users/sessions", endpoint="user_sessions"))
+        admin.add_view(NoPyMongoView(name=lazy_gettext("User sessions"), url="/admin/users/sessions", endpoint="user_sessions"))
 
     return admin

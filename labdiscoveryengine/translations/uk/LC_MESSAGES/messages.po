@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: labdiscoveryengine 0.1\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2023-12-07 08:55-0800\n"
+"POT-Creation-Date: 2023-12-07 12:29-0800\n"
 "PO-Revision-Date: 2023-08-23 20:53-0700\n"
 "Last-Translator: ПОВНЕ ІМ'Я <EMAIL@ADDRESS>\n"
 "Language: uk\n"
@@ -79,13 +79,31 @@ msgid "Log in"
 msgstr "Увійти"
 
 #: labdiscoveryengine/templates/default/login.html:15
-#: labdiscoveryengine/views/admin.py:57
+#: labdiscoveryengine/views/admin.py:57 labdiscoveryengine/views/admin.py:162
 msgid "Username"
 msgstr "Ім'я користувача"
 
 #: labdiscoveryengine/templates/default/login.html:26
 msgid "Password"
 msgstr "Пароль"
+
+#: labdiscoveryengine/templates/default/public/index.html:21
+#: labdiscoveryengine/templates/default/public/index.html:30
+#: labdiscoveryengine/templates/default/user/index.html:36
+#: labdiscoveryengine/templates/default/user/index.html:118
+msgid "Keywords"
+msgstr "Ключові слова"
+
+#: labdiscoveryengine/templates/default/public/index.html:22
+#: labdiscoveryengine/templates/default/user/index.html:37
+#: labdiscoveryengine/templates/default/user/index.html:121
+msgid "Resources"
+msgstr "Ресурси"
+
+#: labdiscoveryengine/templates/default/public/index.html:43
+#: labdiscoveryengine/templates/default/user/index.html:60
+msgid "Resource"
+msgstr "Ресурс"
 
 #: labdiscoveryengine/templates/default/user/_base.html:10
 msgid "Logged in as"
@@ -103,16 +121,6 @@ msgstr "Вийти"
 msgid "You are not part of any group"
 msgstr "Ви не є частиною жодної групи"
 
-#: labdiscoveryengine/templates/default/user/index.html:36
-#: labdiscoveryengine/templates/default/user/index.html:118
-msgid "Keywords"
-msgstr "Ключові слова"
-
-#: labdiscoveryengine/templates/default/user/index.html:37
-#: labdiscoveryengine/templates/default/user/index.html:121
-msgid "Resources"
-msgstr "Ресурси"
-
 #: labdiscoveryengine/templates/default/user/index.html:38
 #: labdiscoveryengine/templates/default/user/index.html:61
 msgid "Features"
@@ -121,10 +129,6 @@ msgstr "Особливості"
 #: labdiscoveryengine/templates/default/user/index.html:46
 msgid "Keywords:"
 msgstr "Ключові слова:"
-
-#: labdiscoveryengine/templates/default/user/index.html:60
-msgid "Resource"
-msgstr "Ресурс"
 
 #: labdiscoveryengine/templates/default/user/index.html:76
 msgid "No feature"
@@ -197,12 +201,17 @@ msgid ""
 "If you want to be able to add students, groups and permissions, please go"
 " to the documentation to see how to add SQLAlchemy support:"
 msgstr ""
+"Якщо ви хочете мати можливість додавати студентів, групи та дозволи, будь"
+" ласка, перейдіть до документації, щоб дізнатися, як додати підтримку "
+"SQLAlchemy:"
 
 #: labdiscoveryengine/templates/lde-admin/index.html:22
 msgid ""
 "You can also see when students used the laboratory by checking the User "
 "sessions."
 msgstr ""
+"Ви також можете бачити, коли студенти використовували лабораторію, "
+"перевіряючи сесії користувачів."
 
 #: labdiscoveryengine/templates/lde-admin/index.html:24
 #: labdiscoveryengine/templates/lde-admin/no-pymongo.html:4
@@ -216,36 +225,119 @@ msgid ""
 "laboratory, please go to the documentation to see how to add PyMongo "
 "support:"
 msgstr ""
+"Якщо ви хочете мати можливість зберігати сесії користувачів, щоб знати, "
+"хто і коли використовував кожну лабораторію, будь ласка, перейдіть до "
+"документації, щоб дізнатися, як додати підтримку PyMongo:"
 
 #: labdiscoveryengine/views/admin.py:58
 msgid "Full name"
-msgstr ""
+msgstr "Повне ім'я"
 
-#: labdiscoveryengine/views/admin.py:59
+#: labdiscoveryengine/views/admin.py:59 labdiscoveryengine/views/admin.py:296
+#: labdiscoveryengine/views/admin.py:299
 msgid "Groups"
-msgstr ""
+msgstr "Групи"
 
 #: labdiscoveryengine/views/admin.py:60
 msgid "Last login"
-msgstr ""
+msgstr "Останній вхід"
 
-#: labdiscoveryengine/views/admin.py:61
+#: labdiscoveryengine/views/admin.py:61 labdiscoveryengine/views/admin.py:159
 msgid "Created at"
-msgstr ""
+msgstr "Створено"
 
-#: labdiscoveryengine/views/admin.py:62
+#: labdiscoveryengine/views/admin.py:62 labdiscoveryengine/views/admin.py:160
 msgid "Updated at"
-msgstr ""
+msgstr "Оновлено"
 
-#: labdiscoveryengine/views/admin.py:90
+#: labdiscoveryengine/views/admin.py:63
+msgid "Group name"
+msgstr "Назва групи"
+
+#: labdiscoveryengine/views/admin.py:85
+msgid "Username or Full name"
+msgstr "Ім'я користувача або Повне ім'я"
+
+#: labdiscoveryengine/views/admin.py:97
 msgid "Password is required"
-msgstr ""
+msgstr "Пароль обов'язковий"
 
-#: labdiscoveryengine/views/admin.py:106
+#: labdiscoveryengine/views/admin.py:113
 msgid "Passwords do not match"
-msgstr ""
+msgstr "Паролі не співпадають"
+
+#: labdiscoveryengine/views/admin.py:148 labdiscoveryengine/views/admin.py:161
+msgid "Laboratories"
+msgstr "Лабораторії"
+
+#: labdiscoveryengine/views/admin.py:158 labdiscoveryengine/views/admin.py:171
+msgid "Name"
+msgstr "Назва"
+
+#: labdiscoveryengine/views/admin.py:163
+msgid "User full name"
+msgstr "Повне ім'я користувача"
+
+#: labdiscoveryengine/views/admin.py:164 labdiscoveryengine/views/admin.py:245
+#: labdiscoveryengine/views/admin.py:263 labdiscoveryengine/views/admin.py:264
+msgid "Laboratory"
+msgstr "Лабораторія"
+
+#: labdiscoveryengine/views/admin.py:242 labdiscoveryengine/views/admin.py:255
+#: labdiscoveryengine/views/admin.py:256
+msgid "User"
+msgstr "Користувач"
+
+#: labdiscoveryengine/views/admin.py:243 labdiscoveryengine/views/admin.py:258
+msgid "User role"
+msgstr "Роль користувача"
+
+#: labdiscoveryengine/views/admin.py:244 labdiscoveryengine/views/admin.py:260
+#: labdiscoveryengine/views/admin.py:261
+msgid "Group"
+msgstr "Група"
+
+#: labdiscoveryengine/views/admin.py:246 labdiscoveryengine/views/admin.py:266
+#: labdiscoveryengine/views/admin.py:267
+msgid "Assigned resource"
+msgstr "Призначений ресурс"
+
+#: labdiscoveryengine/views/admin.py:247 labdiscoveryengine/views/admin.py:269
+#: labdiscoveryengine/views/admin.py:270 labdiscoveryengine/views/admin.py:271
+msgid "Start reservation"
+msgstr "Початок резервування"
+
+#: labdiscoveryengine/views/admin.py:248 labdiscoveryengine/views/admin.py:273
+#: labdiscoveryengine/views/admin.py:274
+msgid "Maximum duration"
+msgstr "Максимальна тривалість"
+
+#: labdiscoveryengine/views/admin.py:249 labdiscoveryengine/views/admin.py:279
+#: labdiscoveryengine/views/admin.py:280
+msgid "Queue duration"
+msgstr "Тривалість черги"
+
+#: labdiscoveryengine/views/admin.py:253
+msgid "Reservation identifier"
+msgstr "Ідентифікатор резервування"
+
+#: labdiscoveryengine/views/admin.py:276 labdiscoveryengine/views/admin.py:277
+msgid "Minimum duration"
+msgstr "Мінімальна тривалість"
+
+#: labdiscoveryengine/views/admin.py:295 labdiscoveryengine/views/admin.py:298
+msgid "Users"
+msgstr "Користувачі"
+
+#: labdiscoveryengine/views/admin.py:302 labdiscoveryengine/views/admin.py:304
+msgid "User sessions"
+msgstr "Сесії користувачів"
 
 #: labdiscoveryengine/views/login.py:91
 msgid "Invalid username or password"
-msgstr ""
+msgstr "Неправильне ім'я користувача або пароль"
+
+#: labdiscoveryengine/views/user.py:55
+msgid "All laboratories"
+msgstr "Всі лабораторії"
 

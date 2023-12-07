@@ -1,6 +1,7 @@
 import secrets
 from typing import List, Optional
 from flask import Blueprint, jsonify, request, session, redirect, url_for, g
+from flask_babel import gettext
 
 from sqlalchemy.orm import joinedload
 
@@ -30,11 +31,10 @@ def before_request():
     g.logout_form = logout_form
     g.is_db = session.get('is_db', False)
 
-
 @user_blueprint.context_processor
-def inject_vars():
+def inject_vars():    
     logout_form = g.logout_form
-    username = g.username
+    username = g.username    
     return dict(logout_form=logout_form, username=username)
 
 
@@ -52,7 +52,7 @@ def _get_user_groups_and_labs():
     groups = []
     if g.role == 'admin':
         groups.append({
-            'name': 'All laboratories',
+            'name': gettext("All laboratories"),
             'laboratories': laboratories,
             'laboratories_by_identifier': lde_config.laboratories
         })    

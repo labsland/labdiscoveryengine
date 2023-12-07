@@ -80,7 +80,15 @@
 
 {% block footer %}
     <footer class="footer mt-5">
-        <div class="container">
+        <div class="container text-center">
+            <div class="row">
+                    {% for lang_code, language in list_languages().items() %}
+                    <div class="col">
+                        <a class="btn btn-small btn-outline-secondary" href="{{ url_for(request.endpoint, locale=lang_code) }}">{{ language }}</a>
+                    </div>
+                    {% endfor %}
+            </div>
+            <br>
             <div class="copyright">
                 Copyright &copy; LabDiscoveryEngine Team
             </div>
@@ -96,7 +104,6 @@
             </div>
         </div>
     </footer>
-
 {% endblock %}
 
 {% assets 'bootstrap_js' %}

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: labdiscoveryengine 0.1\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2023-12-07 02:14-0800\n"
+"POT-Creation-Date: 2023-12-07 12:29-0800\n"
 "PO-Revision-Date: 2023-08-23 20:43-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -21,50 +21,62 @@ msgstr ""
 
 #: labdiscoveryengine/templates/default/index.html:29
 msgid "Learn about LabDiscoveryEngine"
-msgstr ""
+msgstr "Aprende sobre LabDiscoveryEngine"
 
 #: labdiscoveryengine/templates/default/index.html:30
 msgid "Explore the main website to find out more about Lab Discovery Engine."
-msgstr ""
+msgstr "Explora el sitio web principal para saber más sobre Lab Discovery Engine."
 
 #: labdiscoveryengine/templates/default/index.html:31
 msgid "Learn More"
-msgstr ""
+msgstr "Aprende más"
 
 #: labdiscoveryengine/templates/default/index.html:43
 msgid "Access Laboratories"
-msgstr ""
+msgstr "Accede a Laboratorios"
 
 #: labdiscoveryengine/templates/default/index.html:46
 msgid "Access the labs provided by this LabDiscoveryEngine instance."
 msgstr ""
+"Accede a los laboratorios proporcionados por esta instancia de "
+"LabDiscoveryEngine."
+
+#: labdiscoveryengine/templates/default/index.html:47
+#: labdiscoveryengine/templates/default/user/index.html:32
+#: labdiscoveryengine/templates/default/user/index.html:62
+#: labdiscoveryengine/templates/default/user/index.html:79
+msgid "Access"
+msgstr "Accede"
 
 #: labdiscoveryengine/templates/default/index.html:49
 msgid "Login to access the labs provided by this LabDiscoveryEngine instance."
 msgstr ""
+"Inicia sesión para acceder a los laboratorios proporcionados por esta "
+"instancia de LabDiscoveryEngine."
 
 #: labdiscoveryengine/templates/default/index.html:50
 #: labdiscoveryengine/templates/default/login.html:36
 msgid "Sign in"
-msgstr ""
+msgstr "Inicia sesión"
 
 #: labdiscoveryengine/templates/default/index.html:64
 msgid "Published Laboratories List"
-msgstr ""
+msgstr "Lista de Laboratorios Publicados"
 
 #: labdiscoveryengine/templates/default/index.html:65
 msgid "Explore the labs offered by this instance."
-msgstr ""
+msgstr "Explora los laboratorios ofrecidos por esta instancia."
 
 #: labdiscoveryengine/templates/default/index.html:66
 msgid "View labs"
-msgstr ""
+msgstr "Ver laboratorios"
 
 #: labdiscoveryengine/templates/default/login.html:9
 msgid "Log in"
-msgstr ""
+msgstr "Iniciar sesión"
 
 #: labdiscoveryengine/templates/default/login.html:15
+#: labdiscoveryengine/views/admin.py:57 labdiscoveryengine/views/admin.py:162
 msgid "Username"
 msgstr "Usuario"
 
@@ -72,113 +84,113 @@ msgstr "Usuario"
 msgid "Password"
 msgstr "Contraseña"
 
-#: labdiscoveryengine/templates/default/user/_base.html:10
-msgid "Logged in as"
-msgstr ""
-
-#: labdiscoveryengine/templates/default/user/_base.html:12
-msgid "Administration panel"
-msgstr ""
-
-#: labdiscoveryengine/templates/default/user/_base.html:17
-msgid "Log out"
-msgstr ""
-
-#: labdiscoveryengine/templates/default/user/index.html:8
-msgid "You are not part of any group"
-msgstr ""
-
-#: labdiscoveryengine/templates/default/user/index.html:32
-#: labdiscoveryengine/templates/default/user/index.html:62
-#: labdiscoveryengine/templates/default/user/index.html:79
-msgid "Access"
-msgstr ""
-
+#: labdiscoveryengine/templates/default/public/index.html:21
+#: labdiscoveryengine/templates/default/public/index.html:30
 #: labdiscoveryengine/templates/default/user/index.html:36
 #: labdiscoveryengine/templates/default/user/index.html:118
 msgid "Keywords"
-msgstr ""
+msgstr "Palabras clave"
 
+#: labdiscoveryengine/templates/default/public/index.html:22
 #: labdiscoveryengine/templates/default/user/index.html:37
 #: labdiscoveryengine/templates/default/user/index.html:121
 msgid "Resources"
-msgstr ""
+msgstr "Recursos"
+
+#: labdiscoveryengine/templates/default/public/index.html:43
+#: labdiscoveryengine/templates/default/user/index.html:60
+msgid "Resource"
+msgstr "Recurso"
+
+#: labdiscoveryengine/templates/default/user/_base.html:10
+msgid "Logged in as"
+msgstr "Conectado como"
+
+#: labdiscoveryengine/templates/default/user/_base.html:12
+msgid "Administration panel"
+msgstr "Panel de administración"
+
+#: labdiscoveryengine/templates/default/user/_base.html:17
+msgid "Log out"
+msgstr "Cerrar sesión"
+
+#: labdiscoveryengine/templates/default/user/index.html:8
+msgid "You are not part of any group"
+msgstr "No formas parte de ningún grupo"
 
 #: labdiscoveryengine/templates/default/user/index.html:38
 #: labdiscoveryengine/templates/default/user/index.html:61
 msgid "Features"
-msgstr ""
+msgstr "Características"
 
 #: labdiscoveryengine/templates/default/user/index.html:46
 msgid "Keywords:"
-msgstr ""
-
-#: labdiscoveryengine/templates/default/user/index.html:60
-msgid "Resource"
-msgstr ""
+msgstr "Palabras clave:"
 
 #: labdiscoveryengine/templates/default/user/index.html:76
 msgid "No feature"
-msgstr ""
+msgstr "Sin características"
 
 #: labdiscoveryengine/templates/default/user/index.html:89
 msgid "Features:"
-msgstr ""
+msgstr "Características:"
 
 #: labdiscoveryengine/templates/default/user/index.html:109
 msgid "Accessing"
-msgstr ""
+msgstr "Accediendo"
 
 #: labdiscoveryengine/templates/default/user/index.html:110
 msgid "Starting reserve process..."
-msgstr ""
+msgstr "Iniciando el proceso de reserva..."
 
 #: labdiscoveryengine/templates/default/user/index.html:111
 msgid "Waiting to be ready..."
-msgstr ""
+msgstr "Esperando estar listo..."
 
 #: labdiscoveryengine/templates/default/user/index.html:112
 msgid "Reservation finished..."
-msgstr ""
+msgstr "Reserva finalizada..."
 
 #: labdiscoveryengine/templates/default/user/index.html:113
 msgid "Reservation is ready. Redirecting..."
-msgstr ""
+msgstr "La reserva está lista. Redirigiendo..."
 
 #: labdiscoveryengine/templates/default/user/index.html:114
 msgid "Reservation is queued in position {pos}..."
-msgstr ""
+msgstr "La reserva está en cola en la posición {pos}..."
 
 #: labdiscoveryengine/templates/default/user/index.html:115
 msgid "Reservation cancelled: no resource was available."
-msgstr ""
+msgstr "Reserva cancelada: no había recursos disponibles."
 
 #: labdiscoveryengine/templates/default/user/index.html:117
 msgid "Hide Keywords"
-msgstr ""
+msgstr "Ocultar Palabras Clave"
 
 #: labdiscoveryengine/templates/default/user/index.html:120
 msgid "Hide Resources"
-msgstr ""
+msgstr "Ocultar Recursos"
 
 #: labdiscoveryengine/templates/lde-admin/index.html:5
 msgid "Back to the labs"
-msgstr ""
+msgstr "Volver a los laboratorios"
 
 #: labdiscoveryengine/templates/lde-admin/index.html:8
 msgid "Welcome to the administration panel"
-msgstr ""
+msgstr "Bienvenido al panel de administración"
 
 #: labdiscoveryengine/templates/lde-admin/index.html:12
 msgid ""
 "Here you can create student accounts, add them in groups, and allow those"
 " groups to use laboratories."
 msgstr ""
+"Aquí puedes crear cuentas de estudiantes, añadirlos a grupos y permitir "
+"que esos grupos usen los laboratorios."
 
 #: labdiscoveryengine/templates/lde-admin/index.html:14
 #: labdiscoveryengine/templates/lde-admin/no-sqlalchemy.html:4
 msgid "No SQLAlchemy configured"
-msgstr ""
+msgstr "No se ha configurado SQLAlchemy"
 
 #: labdiscoveryengine/templates/lde-admin/index.html:15
 #: labdiscoveryengine/templates/lde-admin/no-sqlalchemy.html:5
@@ -186,17 +198,21 @@ msgid ""
 "If you want to be able to add students, groups and permissions, please go"
 " to the documentation to see how to add SQLAlchemy support:"
 msgstr ""
+"Si deseas poder añadir estudiantes, grupos y permisos, por favor consulta"
+" la documentación para ver cómo añadir soporte para SQLAlchemy:"
 
 #: labdiscoveryengine/templates/lde-admin/index.html:22
 msgid ""
 "You can also see when students used the laboratory by checking the User "
 "sessions."
 msgstr ""
+"También puedes ver cuándo los estudiantes usaron el laboratorio revisando"
+" las sesiones de Usuario."
 
 #: labdiscoveryengine/templates/lde-admin/index.html:24
 #: labdiscoveryengine/templates/lde-admin/no-pymongo.html:4
 msgid "No PyMongo configured"
-msgstr ""
+msgstr "No se ha configurado PyMongo"
 
 #: labdiscoveryengine/templates/lde-admin/index.html:25
 #: labdiscoveryengine/templates/lde-admin/no-pymongo.html:5
@@ -205,16 +221,119 @@ msgid ""
 "laboratory, please go to the documentation to see how to add PyMongo "
 "support:"
 msgstr ""
+"Si deseas poder almacenar sesiones de usuario para saber quién utilizó "
+"cada laboratorio y cuándo, por favor consulta la documentación para ver "
+"cómo añadir soporte para PyMongo:"
 
-#: labdiscoveryengine/views/admin.py:82
+#: labdiscoveryengine/views/admin.py:58
+msgid "Full name"
+msgstr "Nombre completo"
+
+#: labdiscoveryengine/views/admin.py:59 labdiscoveryengine/views/admin.py:296
+#: labdiscoveryengine/views/admin.py:299
+msgid "Groups"
+msgstr "Grupos"
+
+#: labdiscoveryengine/views/admin.py:60
+msgid "Last login"
+msgstr "Último inicio de sesión"
+
+#: labdiscoveryengine/views/admin.py:61 labdiscoveryengine/views/admin.py:159
+msgid "Created at"
+msgstr "Creado en"
+
+#: labdiscoveryengine/views/admin.py:62 labdiscoveryengine/views/admin.py:160
+msgid "Updated at"
+msgstr "Actualizado en"
+
+#: labdiscoveryengine/views/admin.py:63
+msgid "Group name"
+msgstr "Nombre del grupo"
+
+#: labdiscoveryengine/views/admin.py:85
+msgid "Username or Full name"
+msgstr "Nombre de usuario o Nombre completo"
+
+#: labdiscoveryengine/views/admin.py:97
 msgid "Password is required"
-msgstr ""
+msgstr "Se requiere contraseña"
 
-#: labdiscoveryengine/views/admin.py:98
+#: labdiscoveryengine/views/admin.py:113
 msgid "Passwords do not match"
-msgstr ""
+msgstr "Las contraseñas no coinciden"
+
+#: labdiscoveryengine/views/admin.py:148 labdiscoveryengine/views/admin.py:161
+msgid "Laboratories"
+msgstr "Laboratorios"
+
+#: labdiscoveryengine/views/admin.py:158 labdiscoveryengine/views/admin.py:171
+msgid "Name"
+msgstr "Nombre"
+
+#: labdiscoveryengine/views/admin.py:163
+msgid "User full name"
+msgstr "Nombre completo del usuario"
+
+#: labdiscoveryengine/views/admin.py:164 labdiscoveryengine/views/admin.py:245
+#: labdiscoveryengine/views/admin.py:263 labdiscoveryengine/views/admin.py:264
+msgid "Laboratory"
+msgstr "Laboratorio"
+
+#: labdiscoveryengine/views/admin.py:242 labdiscoveryengine/views/admin.py:255
+#: labdiscoveryengine/views/admin.py:256
+msgid "User"
+msgstr "Usuario"
+
+#: labdiscoveryengine/views/admin.py:243 labdiscoveryengine/views/admin.py:258
+msgid "User role"
+msgstr "Rol de usuario"
+
+#: labdiscoveryengine/views/admin.py:244 labdiscoveryengine/views/admin.py:260
+#: labdiscoveryengine/views/admin.py:261
+msgid "Group"
+msgstr "Grupo"
+
+#: labdiscoveryengine/views/admin.py:246 labdiscoveryengine/views/admin.py:266
+#: labdiscoveryengine/views/admin.py:267
+msgid "Assigned resource"
+msgstr "Recurso asignado"
+
+#: labdiscoveryengine/views/admin.py:247 labdiscoveryengine/views/admin.py:269
+#: labdiscoveryengine/views/admin.py:270 labdiscoveryengine/views/admin.py:271
+msgid "Start reservation"
+msgstr "Iniciar reserva"
+
+#: labdiscoveryengine/views/admin.py:248 labdiscoveryengine/views/admin.py:273
+#: labdiscoveryengine/views/admin.py:274
+msgid "Maximum duration"
+msgstr "Duración máxima"
+
+#: labdiscoveryengine/views/admin.py:249 labdiscoveryengine/views/admin.py:279
+#: labdiscoveryengine/views/admin.py:280
+msgid "Queue duration"
+msgstr "Duración en cola"
+
+#: labdiscoveryengine/views/admin.py:253
+msgid "Reservation identifier"
+msgstr "Identificador de reserva"
+
+#: labdiscoveryengine/views/admin.py:276 labdiscoveryengine/views/admin.py:277
+msgid "Minimum duration"
+msgstr "Duración mínima"
+
+#: labdiscoveryengine/views/admin.py:295 labdiscoveryengine/views/admin.py:298
+msgid "Users"
+msgstr "Usuarios"
+
+#: labdiscoveryengine/views/admin.py:302 labdiscoveryengine/views/admin.py:304
+msgid "User sessions"
+msgstr "Sesiones de usuario"
 
 #: labdiscoveryengine/views/login.py:91
 msgid "Invalid username or password"
-msgstr ""
+msgstr "Nombre de usuario o contraseña inválidos"
+
+#: labdiscoveryengine/views/user.py:55
+msgid "All laboratories"
+msgstr "Todos los laboratorios"
 

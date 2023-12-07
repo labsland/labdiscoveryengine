@@ -1,6 +1,8 @@
+from collections import OrderedDict
 import os
 import sys
-from typing import Optional
+from typing import Dict, Optional
+from babel import Locale
 from flask import Flask, has_request_context, request, session
 
 import yaml
@@ -84,6 +86,7 @@ def create_app(config_name: Optional[str] = None):
     if app.config.get('MONGO_URI'):
         app.config['USING_MONGO'] = True
         mongo.init_app(app)
+        create_mongodb_indexes()
     else:
         app.config['USING_MONGO'] = False
 
@@ -107,13 +110,41 @@ def create_app(config_name: Optional[str] = None):
     app.register_blueprint(external_v1_blueprint, url_prefix='/external/v1')
     app.register_blueprint(public_blueprint, url_prefix='/public')
 
+    def _list_languages() -> Dict[str, str]:
+        global SUPPORTED_LANGUAGES
+        if SUPPORTED_LANGUAGES is None:
+            SUPPORTED_LANGUAGES = OrderedDict()
+
+            translations = babel.list_translations()
+            for language in sorted(translations, key=lambda x: x.language):
+                try:
+                    display_name = language.get_display_name(language).title()
+                except:
+                    display_name = language
+                SUPPORTED_LANGUAGES[language.language] = display_name
+
+        print(SUPPORTED_LANGUAGES)
+        return SUPPORTED_LANGUAGES
+
+    @app.context_processor
+    def inject_vars():
+        return dict(list_languages=_list_languages, locale=get_locale())
+
     if running_mode() == 'web':
         initialize_web(app)
 
     return app
+    
+
+def create_mongodb_indexes():
+    for column in ['user', 'user_role', 'group', 'laboratory', 'assigned_resource', 
+                    'start_reservation', 'max_duration', 'queue_duration', 'reservation_id',
+                    'resources', 'features', 'priority', 'start', 'min_end', 'max_end', 
+                    'end_reservation']:
+        mongo.db.sessions.create_index(column)
 
 SUPPORTED_TRANSLATIONS = None
-
+SUPPORTED_LANGUAGES = None
 
 def get_locale():
     """ Defines what's the current language for the user. It uses different approaches. """
