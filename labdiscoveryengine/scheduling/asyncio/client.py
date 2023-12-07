@@ -109,8 +109,8 @@ class LabDiscoveryLibResourceClient(GenericResourceClient):
                 'user': {
                     # User data
                 },
-                'metadata': {
-                    # System data
+                'server': {
+                    # Server data
                 },
                 'backUrl': reservation_request.back_url,
             },

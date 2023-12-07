@@ -7,27 +7,25 @@
 
 fpga-1:
   # Include the URL and credentials of the remote laboratory
-  url: http://localhost:5010
+  url: http://localhost:5010/foo
   login: lde # If always the same use DEFAULT_RESOURCE_LOGIN in credentials.yml
   password: password # If always the same use DEFAULT_RESOURCE_PASSWORD in credentials.yml
   features: ['feature1', 'feature2','feature5','feature6']
-  api: weblablib
 
   cameras:
     main: https://cams.ilb.labsland.com/cams/robot3_hd
 
-  healthchecks:
-    # We automatically do healthchecks on cameras and /lde/sessions/test
-    # But we can optionally add additional tests here
-    url: http://... 
+
+  # We automatically do healthchecks on cameras and /lde/sessions/test
+  # But we can optionally add additional tests here
+  healthchecks: {}
 
 fpga-2:
   # Include the URL and credentials of the remote laboratory
-  url: http://localhost:5011
+  url: http://localhost:5011/foo
   login: lde
   password: password
   features: ['feature1', 'feature3']
-  api: weblablib
 
 arch-1:
   url: http://localhost:5002

@@ -102,6 +102,7 @@
     var RESERVE_FINISHED_MESSAGE = {{ gettext("Reservation finished...")|tojson }};  // TO-DO: What is this state?
     var RESERVE_READY_MESSAGE = {{ gettext("Reservation is ready. Redirecting...")|tojson }};
     var RESERVE_QUEUED = {{ gettext("Reservation is queued in position {pos}...")|tojson }};
+    var BROKEN_FINISHED_MESSAGE = {{ gettext("Reservation cancelled: no resource was available.")|tojson }};
 
     var HIDE_KEYWORDS_MESSAGE = {{ gettext("Hide Keywords")|tojson }};
     var KEYWORDS_MESSAGE = {{ gettext("Keywords")|tojson }};
@@ -172,12 +173,15 @@
             $(messageDomIdentifier).text(RESERVE_WAITING_MESSAGE);
         } else if (response.status === "finished") {
             $(messageDomIdentifier).text(RESERVE_FINISHED_MESSAGE);
+        } else if (response.status === "broken") {
+            $(messageDomIdentifier).text(BROKEN_FINISHED_MESSAGE);
+            return;
         } else {
             $(messageDomIdentifier).text(response.status);
         }
 
         $.ajax({
-            url: window.API_URL + "/reservations/" + response.reservation_id + previousState,
+            url: window.API_URL + "reservations/" + response.reservation_id + previousState,
             type: "GET"
         }).done(function (response) {
             if (response.success) {
@@ -223,7 +227,7 @@
             }
 
             $.ajax({
-                url: window.API_URL + "/reservations/",
+                url: window.API_URL + "reservations/",
                 type: "POST",
                 contentType: "application/json",
                 data: JSON.stringify(requestData),

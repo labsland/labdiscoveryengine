@@ -2,7 +2,10 @@ import asyncio
 import json
 import logging
 import time
-from typing import Optional
+from typing import Optional, Tuple
+
+import aiohttp.web
+import aiohttp.client_exceptions
 
 from labdiscoveryengine.scheduling.data import ReservationRequest
 
@@ -43,6 +46,8 @@ class ResourceReservationProcessor:
         # TODO: what to do? should we pass it to another resource, if available? How do we know which ones have already been tested?
         # TODO: BUT WATCHOUT: we don't want to deassign if the problem was 
         await self.deassign(reservation_request)
+        await aioredis_store.hset(self.reservation_keys.base(), ReservationKeys.parameters.status, ReservationKeys.states.broken)
+        await aioredis_store.publish(self.reservation_keys.channel(), ReservationKeys.states.broken)
 
     async def did_user_cancel(self) -> bool:
         """
@@ -63,60 +68,67 @@ class ResourceReservationProcessor:
         # Note: if there is an IO exception we should do something, such as stop the reservation, resend it or whatever.
         # However! No try..finally for deassign just in case it's a valid reason for stopping (e.g., Cancel, etc.)
         #
-        logger.info(f"[{self.resource.identifier}] Starting to process reservation: {self.reservation_id}")
+        try:
+            logger.info(f"[{self.resource.identifier}] Starting to process reservation: {self.reservation_id}")
 
-        status: Optional[str] = await aioredis_store.hget(self.reservation_keys.base(), ReservationKeys.parameters.status)
-        metadata_str: Optional[str] = await aioredis_store.hget(self.reservation_keys.base(), ReservationKeys.parameters.metadata)
+            status: Optional[str] = await aioredis_store.hget(self.reservation_keys.base(), ReservationKeys.parameters.status)
+            metadata_str: Optional[str] = await aioredis_store.hget(self.reservation_keys.base(), ReservationKeys.parameters.metadata)
 
-        if status is None or metadata_str is None:
-            logger.error(f"[{self.resource.identifier}] Error: reservation {self.reservation_id} not found")
-            return await self.fail()
+            if status is None or metadata_str is None:
+                logger.error(f"[{self.resource.identifier}] Error: reservation {self.reservation_id} not found")
+                return await self.fail()
 
-        metadata = json.loads(metadata_str)
+            metadata = json.loads(metadata_str)
 
-        reservation_request: ReservationRequest = ReservationRequest.fromdict(metadata)
+            reservation_request: ReservationRequest = ReservationRequest.fromdict(metadata)
 
-        self.client: GenericResourceClient = self.get_client()
+            self.client: GenericResourceClient = self.get_client()
 
-        session_id: str = None
+            session_id: str = None
 
-        async with self.client:
-            # Go state by state, in order, and finish it when needed
+            async with self.client:
+                # Go state by state, in order, and finish it when needed
 
-            if await self.did_user_cancel():
-                return await self.cancelled(reservation_request=reservation_request, session_id=None)
+                if await self.did_user_cancel():
+                    return await self.cancelled(reservation_request=reservation_request, session_id=None)
 
-            # If it is queued, then go ahead and initialize it
-            if status in (ReservationKeys.states.pending, ReservationKeys.states.queued):
+                # If it is queued, then go ahead and initialize it
+                if status in (ReservationKeys.states.pending, ReservationKeys.states.queued):
 
-                status, session_id = await self.initialize_laboratory(reservation_request)
+                    initialization_response = await self.initialize_laboratory(reservation_request)
+                    if initialization_response is None:
+                        return 
+                    status, session_id = initialization_response
 
-            if await self.did_user_cancel():
-                return await self.cancelled(reservation_request=reservation_request, session_id=session_id)
-
-            if status == ReservationKeys.states.ready:
-
-                if session_id is None:
-                    session_id = await aioredis_store.hget(self.reservation_keys.base(), ReservationKeys.parameters.session_id)
-
-                while status == ReservationKeys.states.ready:
-
-                    if await self.did_user_cancel():
-                        return await self.cancelled(reservation_request=reservation_request, session_id=session_id)
-
-                    status = await self.wait_for_reservation_being_over(session_id, max_time=10)
-                
-                if status == ReservationKeys.states.cancelling:
+                if await self.did_user_cancel():
                     return await self.cancelled(reservation_request=reservation_request, session_id=session_id)
 
-            if status == ReservationKeys.states.finished:
-                # TODO: what should we do in this case?
-                logger.info(f"[{self.resource.identifier}] Successfully finished reservation {self.reservation_id}")
-                await self.deassign(reservation_request=reservation_request)
+                if status == ReservationKeys.states.ready:
 
-            await self.finish(reservation_request, session_id)
+                    if session_id is None:
+                        session_id = await aioredis_store.hget(self.reservation_keys.base(), ReservationKeys.parameters.session_id)
 
-    async def initialize_laboratory(self, reservation_request: ReservationRequest) -> str:
+                    while status == ReservationKeys.states.ready:
+
+                        if await self.did_user_cancel():
+                            return await self.cancelled(reservation_request=reservation_request, session_id=session_id)
+
+                        status = await self.wait_for_reservation_being_over(session_id, max_time=10)
+                    
+                    if status == ReservationKeys.states.cancelling:
+                        return await self.cancelled(reservation_request=reservation_request, session_id=session_id)
+
+                if status == ReservationKeys.states.finished:
+                    # TODO: what should we do in this case?
+                    logger.info(f"[{self.resource.identifier}] Successfully finished reservation {self.reservation_id}")
+                    await self.deassign(reservation_request=reservation_request)
+
+                await self.finish(reservation_request, session_id)
+        except (aiohttp.web.HTTPException, aiohttp.client_exceptions.ClientError) as err:
+            logger.error(f"[{self.resource.identifier}] Error: failed to process reservation {self.reservation_id}: {err}", exc_info=True)
+            return await self.fail()
+
+    async def initialize_laboratory(self, reservation_request: ReservationRequest) -> Optional[Tuple[str, str]]:
         """
         Initialize the laboratory, calling LabDiscoveryLib and create a new session
 
