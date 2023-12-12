@@ -15,7 +15,6 @@ fpga-1:
   cameras:
     main: https://cams.ilb.labsland.com/cams/robot3_hd
 
-
   # We automatically do healthchecks on cameras and /lde/sessions/test
   # But we can optionally add additional tests here
   healthchecks: {}
