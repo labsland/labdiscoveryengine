@@ -14,7 +14,7 @@ from labdiscoveryengine.utils import is_mongo_active
 logger = logging.getLogger(__name__)
 
 from labdiscoveryengine.data import Resource
-from labdiscoveryengine.scheduling.asyncio.client import GenericResourceClient, LabDiscoveryLibResourceClient, WebLabLibResourceClient
+from labdiscoveryengine.scheduling.asyncio.client import AbstractResourceClient, LabDiscoveryLibResourceClient, WebLabLibResourceClient
 from labdiscoveryengine.scheduling.keys import ReservationKeys, ResourceKeys
 from labdiscoveryengine.scheduling.asyncio.redis import aioredis_store
 from labdiscoveryengine.scheduling.asyncio.mongodb import async_mongo
@@ -36,7 +36,7 @@ class ResourceReservationProcessor:
         self.reservation_keys = ReservationKeys(reservation_id)
         self.client = None
 
-    def get_client(self) -> GenericResourceClient:
+    def get_client(self) -> AbstractResourceClient:
         """
         Returns a client that can be used to start/stop/check the reservation
         """
@@ -101,7 +101,7 @@ class ResourceReservationProcessor:
 
             reservation_request: ReservationRequest = ReservationRequest.fromdict(metadata)
 
-            self.client: GenericResourceClient = self.get_client()
+            self.client: AbstractResourceClient = self.get_client()
 
             session_id: str = None
 

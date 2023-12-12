@@ -1,3 +1,4 @@
+import abc
 from typing import Iterable, List, NamedTuple, Optional, Dict, Set, Union
 
 from flask import current_app
@@ -39,6 +40,39 @@ class ExternalUser(NamedTuple):
         """
         return check_password_hash(self.hashed_password, password)    
 
+class Healthcheck:
+    __meta__ = abc.ABCMeta
+
+    def __init__(self, identifier: str):
+        self.identifier: str = identifier
+
+class HttpHealthcheck(Healthcheck):
+    """
+    A healthcheck is a HTTP call to the laboratory.
+    """
+    def __init__(self, identifier: str, url: str):
+        self.identifier: str = identifier
+        self.url: str = url
+
+class Camera:
+    """
+    A camera is a webcam that is connected to the laboratory.
+
+    There can be an image camera and more options (timeout, etc.)
+    """
+    __meta__ = abc.ABCMeta
+
+    def __init__(self, identifier: str):
+        self.identifier: str = identifier
+
+class ImageCamera(Camera):
+    """
+    This represents a webcam that uses imgage refresh (e.g., jpg's)
+    """
+    def __init__(self, identifier: str, url: str):
+        self.identifier = identifier
+        self.url = url
+
 class Resource(NamedTuple):
     """
     A laboratory si composed of one or multiple resources. A resource represents only
@@ -49,6 +83,9 @@ class Resource(NamedTuple):
     login: str
     password: str
     features: List[str]
+
+    cameras: List[Camera]
+    healthchecks: List[Healthcheck]
 
     # Also acceptable: weblablib-v1.0
     api: str = "labdiscoverylib-v1.0"

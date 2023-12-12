@@ -17,7 +17,8 @@ fpga-1:
 
   # We automatically do healthchecks on cameras and /lde/sessions/test
   # But we can optionally add additional tests here
-  healthchecks: {}
+  healthchecks:
+    test-device: https://labs.ilb.labsland.com/zumoline3/healthcheck
 
 fpga-2:
   # Include the URL and credentials of the remote laboratory

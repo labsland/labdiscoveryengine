@@ -9,7 +9,7 @@ from labdiscoveryengine.scheduling.keys import ResourceKeys
 
 from labdiscoveryengine.utils import lde_config
 
-class GenericResourceClient:
+class AbstractResourceClient:
     """
     HTTP client wrapper for LabDiscoveryLib and WebLabLib (backwards compatibility) 
     """
@@ -31,6 +31,16 @@ class GenericResourceClient:
     
     async def __aexit__(self, exc_type, exc_value, traceback):
         await self.client_session.__aexit__(exc_type, exc_value, traceback)
+
+    @staticmethod
+    def create(resource: Resource) -> "AbstractResourceClient":
+        """
+        Create a client for the given resource
+        """
+        if resource.api.startswith('weblablib'):
+            return WebLabLibResourceClient(resource)
+        else:
+            return LabDiscoveryLibResourceClient(resource)
 
     @abc.abstractmethod
     def _get_url(self, path: str):
@@ -92,7 +102,7 @@ class GenericResourceClient:
 
         return result.get('should_finish', -1)
         
-class LabDiscoveryLibResourceClient(GenericResourceClient):
+class LabDiscoveryLibResourceClient(AbstractResourceClient):
     """
     HTTP Client wrapper of the LDL client
     """
@@ -129,7 +139,7 @@ class LabDiscoveryLibResourceClient(GenericResourceClient):
             }
         }
 
-class WebLabLibResourceClient(GenericResourceClient):
+class WebLabLibResourceClient(AbstractResourceClient):
     """
     HTTP Client wrapper of the weblablib client
     """

@@ -5,7 +5,7 @@ import datetime
 
 from collections import OrderedDict
 from functools import partial
-from typing import Any, Dict, NamedTuple, Optional, Union
+from typing import Any, Dict, List, NamedTuple, Optional, Union
 
 import yaml
 from flask import current_app
@@ -14,7 +14,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 from labdiscoveryengine.configuration.exc import ConfigurationDirectoryNotFoundError, ConfigurationFileNotFoundError, InvalidConfigurationFoundError, InvalidConfigurationValueError, InvalidLaboratoryConfigurationError, InvalidUsernameConfigurationError
 
-from ..data import Administrator, ExternalUser, Laboratory, Resource
+from ..data import Administrator, Camera, ExternalUser, Healthcheck, HttpHealthcheck, ImageCamera, Laboratory, Resource
 
 
 # Define a custom representer for OrderedDict
@@ -150,6 +150,8 @@ def get_latest_configuration(configuration: Optional[StoredConfiguration] = None
                 resource_login = resource_data.get('login') or get_config('DEFAULT_RESOURCE_LOGIN')
                 resource_password = resource_data.get('password') or get_config('DEFAULT_RESOURCE_PASSWORD')
                 resource_features = resource_data.get('features') or []
+                resource_healthchecks: List[Healthcheck] = _parse_healthchecks_config(resource_data.get('healthchecks')) or []
+                resource_cameras: List[Camera] = _parse_cameras_config(resource_data.get('cameras')) or []
                 resource_api = resource_data.get('api') or 'labdiscoverylib'
 
                 if resource_login is None:
@@ -171,6 +173,8 @@ def get_latest_configuration(configuration: Optional[StoredConfiguration] = None
                     login=resource_login,
                     password=resource_password,
                     features=resource_features,
+                    healthchecks=resource_healthchecks,
+                    cameras=resource_cameras,
                     api=resource_api
                 )
                 
@@ -267,6 +271,54 @@ def get_latest_configuration(configuration: Optional[StoredConfiguration] = None
             raise InvalidConfigurationValueError(f"Invalid credentials in file {configuration_files[ConfigurationFileNames.credentials].absolute()}: {err}")
         
     return configuration
+
+def _parse_healthchecks_config(config: Optional[dict]) -> List[Healthcheck]:
+    """
+    For a configuration such as:
+
+    healthchecks:
+        test-fpga1:
+            url: http://192.168.0.101/status
+            # other properties, such as code or something more comples
+            # or even type: (and a complete different type of check)
+    """
+    result = []
+    if config is None:
+        config = {}
+    
+    for healthcheck_identifier, healthcheck_properties in config.items():
+        if isinstance(healthcheck_properties, str):
+            healthcheck_url = healthcheck_properties
+        else:
+            # In the future we can add more types depending on the properties
+            healthcheck_url = healthcheck_properties.get('url')
+        result.append(HttpHealthcheck(identifier=healthcheck_identifier, url=healthcheck_url))
+
+    return result
+
+def _parse_cameras_config(config: Optional[dict]) -> List[Camera]:
+    """
+    For a configuration such as:
+
+    cameras:
+        - cam1:
+            url: http://example.com/fpga1.jpg
+            # other properties
+            # or even type: (and a complete different type of camera)
+    """
+    result = []
+    if config is None:
+        config = {}
+    
+    for cam_identifier, cam_properties in config.items():
+        if isinstance(cam_properties, str):
+            cam_url = cam_properties
+        else:
+            # In the future we can add more types depending on the properties
+            cam_url = cam_properties.get('url')
+        result.append(ImageCamera(identifier=cam_identifier, url=cam_url))
+
+    return result
 
 def _get_config(configuration: StoredConfiguration, key: str) -> Any:
     if key in configuration.variables:
