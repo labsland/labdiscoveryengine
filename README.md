@@ -73,6 +73,7 @@ As part of the LabDiscoveryEngine project, two reference remote labs have been d
 
 The FPGA remote lab provides control over a FPGA device and is oriented towards computer vision and other applications. It is developed and hosted by H-BRS (Germany).
 The repository is found in: https://github.com/Andrea-Schwandt/LabDiscoverEngine-FPGA-Lab
+Andrea Schanwdt, its main developer, presents it here: https://youtu.be/2Da-6_kJjmI
 
 ### Buck and Bust Converters remote lab
 
