@@ -105,6 +105,8 @@ class ResourceWorker:
         logger.info(f"[{self.resource.identifier}] Searching for an unfinished reservations...")
         
         reservation_id = await aioredis_store.get(ResourceKeys(self.resource_name).assigned())
+        if reservation_id is None:
+            return
         processor = ResourceReservationProcessor(self.resource, reservation_id)
             
         # Now wait until the process is over
@@ -127,4 +129,3 @@ class ResourceWorker:
             
             # Now wait until the process is over
             await processor.process()
-

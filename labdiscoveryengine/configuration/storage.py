@@ -103,7 +103,7 @@ def get_latest_configuration(configuration: Optional[StoredConfiguration] = None
     if configuration is None:
         configuration = StoredConfiguration.create_empty()
 
-    get_config = partial(_get_config, configuration=configuration)
+    get_config = partial(_get_config, configuration)
 
     configuration_values: Dict[str, Dict] = {}
     configuration_checks: Dict[str, datetime.datetime] = {}
