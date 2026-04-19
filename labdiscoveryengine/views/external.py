@@ -64,10 +64,20 @@ def reservations():
         for resource in resources:
             if not isinstance(resource, str):
                 return jsonify(success=False, code='invalid-request', message=f'Invalid resource (must be string): {resource}'), 400
-            
+
+        laboratory_resources = set(lde_config.laboratories[laboratory].resources)
         if not resources:
             # If it adds no resources, it means that all resources are valid
-            resources = list(lde_config.laboratories[laboratory].resources)
+            resources = list(laboratory_resources)
+        else:
+            invalid_resources = [resource for resource in resources if resource not in laboratory_resources]
+            if invalid_resources:
+                invalid_resources_text = ", ".join(sorted(invalid_resources))
+                return jsonify(
+                    success=False,
+                    code='invalid-request',
+                    message=f'Resources not in laboratory {laboratory}: {invalid_resources_text}',
+                ), 400
 
         user_identifier = request_data.get('userIdentifier')
         if not user_identifier:
