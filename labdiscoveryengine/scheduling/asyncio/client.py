@@ -152,8 +152,9 @@ class WebLabLibResourceClient(AbstractResourceClient):
     def _get_start_body(self, reservation_request: ReservationRequest) -> dict:
         now = datetime.datetime.now(datetime.timezone.utc)
         laboratory = lde_config.laboratories[reservation_request.laboratory]
+        client_initial_data = dict(reservation_request.client_initial_data or {})
         return {
-            'client_initial_data': {},
+            'client_initial_data': client_initial_data,
             'server_initial_data': {
                 'request.locale': reservation_request.locale,
                 'request.username': reservation_request.external_user_identifier or reservation_request.user_identifier,

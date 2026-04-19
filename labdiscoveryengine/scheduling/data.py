@@ -1,5 +1,5 @@
 import abc
-from typing import NamedTuple, Optional, List
+from typing import Any, Dict, NamedTuple, Optional, List
 
 from labdiscoveryengine.scheduling.keys import ReservationKeys
 
@@ -29,6 +29,9 @@ class ReservationRequest(NamedTuple):
     # Not 'labsland', but an anonymous user in the other system
     external_user_identifier: Optional[str] = None
 
+    # Optional WebLab-style client initial data for the underlying session
+    client_initial_data: Optional[Dict[str, Any]] = None
+
     @property
     def unique_username(self):
         if self.external_user_identifier:
@@ -49,6 +52,7 @@ class ReservationRequest(NamedTuple):
             'priority': self.priority,
             'external_user_identifier': self.external_user_identifier,
             'back_url': self.back_url,
+            'client_initial_data': self.client_initial_data,
         }
     
     @staticmethod
@@ -73,6 +77,9 @@ class ReservationRequest(NamedTuple):
 
         if data.get('user_full_name') is not None:
             kwargs['user_full_name'] = data['user_full_name']
+
+        if data.get('client_initial_data') is not None:
+            kwargs['client_initial_data'] = data['client_initial_data']
 
         return ReservationRequest(**kwargs)
     

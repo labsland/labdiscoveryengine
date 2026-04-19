@@ -96,6 +96,9 @@ def reservations():
         
         locale: Optional[str] = request_data.get('locale') or 'en'
         user_full_name = request_data.get('userFullName')
+        client_initial_data = request_data.get('clientInitialData')
+        if client_initial_data is not None and not isinstance(client_initial_data, dict):
+            return jsonify(success=False, code='invalid-request', message='Invalid clientInitialData (must be object)'), 400
 
         reservation_request = ReservationRequest(
             identifier=secrets.token_urlsafe(),
@@ -110,6 +113,7 @@ def reservations():
             back_url=back_url,
             max_time=max_time,
             locale=locale,
+            client_initial_data=client_initial_data,
         )
 
         reservation_status: ReservationStatus = add_reservation(reservation_request=reservation_request)
