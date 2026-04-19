@@ -53,7 +53,11 @@ if status == "pending" or status == "queued" then
         position = min_position
         status = "queued"
     else
-        status = "broken"
+        -- A worker may have dequeued the reservation just before this status
+        -- lookup runs, while the reservation hash still says pending/queued.
+        -- Keep the request in a non-terminal state and let the next poll read
+        -- the updated initializing/ready/broken status from the hash.
+        status = "pending"
     end
 
 elseif status == "ready" or status == "cancelling" or status == "finishing" then
