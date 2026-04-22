@@ -190,7 +190,7 @@ def deployments_add_gunicorn_script(directory: str, force: bool, keep_alive: int
     lines = [
         _generate_running_script(directory_path, variables=script_variables),
         "# Locate scripts/wsgi_app.py",
-        "export PYTHONPATH=$PYTHONPATH:scripts",
+        "export PYTHONPATH=${PYTHONPATH:-}:scripts",
         "",
     ]
     
