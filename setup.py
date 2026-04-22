@@ -1,6 +1,5 @@
 #-*-*- encoding: utf-8 -*-*-
 import os
-import platform
 import subprocess
 from collections import OrderedDict
 
@@ -29,6 +28,14 @@ with open("README.md", "r") as fh:
 with open('requirements.txt') as f:
     requirements = [line.strip() for line in f if not line.startswith('#') and line.strip() != '']
 
+
+def _asset_build_env():
+    build_env = os.environ.copy()
+    build_env.setdefault('FLASK_APP', 'autoapp')
+    build_env.setdefault('FLASK_CONFIG', 'default')
+    build_env.setdefault('FLASK_RUN_WITH_THREADS', '1')
+    return build_env
+
 class NpmInstall(Command):
     description = 'Install npm dependencies and build assets'
     user_options = [
@@ -45,10 +52,7 @@ class NpmInstall(Command):
         if self.force or not os.path.exists('labdiscoveryengine/static/node_modules') or not os.path.exists('labdiscoveryengine/static/gen'):
             try:
                 subprocess.check_call(['npm', 'install'], cwd='labdiscoveryengine/static')
-                if platform.system() in ['Windows', 'Microsoft']:
-                    subprocess.check_call("devrc & flask assets build", shell=True)
-                else:
-                    subprocess.check_call('. ./devrc && flask assets build', shell=True)
+                subprocess.check_call(['flask', 'assets', 'build'], env=_asset_build_env())
             except subprocess.CalledProcessError as e:
                 print(f"The command '{' '.join(e.cmd)}' failed with error code {e.returncode}")
                 raise
