@@ -66,7 +66,8 @@ class CustomSDistCommand(sdist):
 
 class CustomInstallCommand(install):
     def run(self):
-        self.run_command('npm_install')
+        # Host installs should consume the assets already baked into the
+        # source distribution created by the sdist step.
         super().run()
 
 setup(name='labdiscoveryengine',
