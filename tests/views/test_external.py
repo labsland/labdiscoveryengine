@@ -51,6 +51,23 @@ class ExternalTestCase(unittest.TestCase):
         add_reservation.assert_not_called()
 
     @patch("labdiscoveryengine.views.external.add_reservation")
+    def test_create_reservation_unknown_laboratory_message_includes_name(self, add_reservation):
+        response = self.client.post(
+            "/external/v1/reservations/",
+            headers=self._auth_headers(),
+            json={
+                "laboratory": "missing-lab",
+                "userIdentifier": "tester",
+                "backUrl": "https://example.invalid/back",
+            },
+        )
+
+        self.assertEqual(400, response.status_code)
+        self.assertIn("missing-lab", response.json["message"])
+        self.assertNotIn("{laboratory}", response.json["message"])
+        add_reservation.assert_not_called()
+
+    @patch("labdiscoveryengine.views.external.add_reservation")
     def test_create_reservation_accepts_known_resource(self, add_reservation):
         add_reservation.return_value = ReservationStatus(
             status="queued",

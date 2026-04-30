@@ -180,7 +180,7 @@ def get_latest_configuration(configuration: Optional[StoredConfiguration] = None
                 
                 added_resources.append(resource_identifier)
             
-            for resource_identifier in configuration.resources:
+            for resource_identifier in list(configuration.resources):
                 if resource_identifier not in added_resources:
                     configuration.resources.pop(resource_identifier)
 
@@ -216,7 +216,11 @@ def get_latest_configuration(configuration: Optional[StoredConfiguration] = None
                     bypass_resource_health=bool(laboratory_data.get('bypass_resource_health', False)),
                 )
                 configuration.laboratories[identifier] = laboratories[identifier]
-                
+
+            for identifier in list(configuration.laboratories):
+                if identifier not in laboratories:
+                    configuration.laboratories.pop(identifier)
+
             configuration.last_check[ConfigurationFileNames.laboratories] = configuration_checks[ConfigurationFileNames.laboratories]
         except Exception as err:
             raise InvalidConfigurationValueError(f"Invalid laboratories in file {configuration_files[ConfigurationFileNames.laboratories].absolute()}: {err}")
@@ -236,7 +240,7 @@ def get_latest_configuration(configuration: Optional[StoredConfiguration] = None
                                                     )
                 added_administrators.append(login)
 
-            for login in configuration.administrators:
+            for login in list(configuration.administrators):
                 if login not in added_administrators:
                     configuration.administrators.pop(login)
 
@@ -263,7 +267,7 @@ def get_latest_configuration(configuration: Optional[StoredConfiguration] = None
                                                     )
                 added_external_users.append(login)
             
-            for login in configuration.external_users:
+            for login in list(configuration.external_users):
                 if login not in added_external_users:
                     configuration.external_users.pop(login)
 

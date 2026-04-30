@@ -43,7 +43,7 @@ class WorkerAggregator:
                         logger.info(f"Resource {resource} was stopped. Restarting it...")
                         await self.resource_workers[resource].start()
 
-                for resource in self.resource_workers:
+                for resource in list(self.resource_workers):
                     if resource not in lde_config.resources:
                         await self.resource_workers[resource].stop()
                         await self.healthcheck_workers[resource].stop()
@@ -64,9 +64,9 @@ class WorkerAggregator:
         finally:
             logger.info("Stopping every worker...")
 
-            for resource in self.resource_workers:
+            for resource in list(self.resource_workers):
                 await self.resource_workers[resource].stop()
-            for resource in self.healthcheck_workers:
+            for resource in list(self.healthcheck_workers):
                 await self.healthcheck_workers[resource].stop()
 
             self.stopped = True

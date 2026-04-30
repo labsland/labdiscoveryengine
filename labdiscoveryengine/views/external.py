@@ -57,7 +57,7 @@ def reservations():
         if laboratory not in lde_config.laboratories:
             # This would usually be a security issue, as external users will know the full list of laboratories (secret or not)
             # However, in 99% of the cases, the LDE host trusts the external system, and it can help debugging distributed systems
-            return jsonify(success=False, code='invalid-request', message='Laboratory {laboratory} does not exist'), 400
+            return jsonify(success=False, code='invalid-request', message=f'Laboratory {laboratory} does not exist'), 400
         
         resources: Optional[str] = request_data.get('resources') or [] # Ok if empty
 
@@ -92,7 +92,7 @@ def reservations():
                 return jsonify(success=False, code='invalid-request', message=f'Invalid feature (must be string): {feature}'), 400
 
         if laboratory not in lde_config.external_users[g.external_username].laboratories:
-            return jsonify(success=False, code='invalid-request', message='User {g.external_username} is not authorized to reserve in {laboratory}'), 400
+            return jsonify(success=False, code='invalid-request', message=f'User {g.external_username} is not authorized to reserve in {laboratory}'), 400
         
         back_url = request_data.get('backUrl')
         if not back_url:

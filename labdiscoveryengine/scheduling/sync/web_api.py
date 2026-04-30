@@ -104,43 +104,37 @@ def initialize_web(app: Flask):
     
 
 def add_reservation(reservation_request: ReservationRequest) -> ReservationStatus:
+    candidate_resources = list(reservation_request.resources)
     if reservation_request.features:
-        resources_to_remove = []
-        for resource_name in reservation_request.resources:
+        feature_filtered_resources = []
+        for resource_name in candidate_resources:
             resource = lde_config.resources.get(resource_name)
             if not resource:
-                resources_to_remove.append(resource_name)
+                continue
 
-            for feature in reservation_request.features:
-                if feature not in resource.features:
-                    resources_to_remove.append(resource_name)
-                    break
-
-        for resource_name in resources_to_remove:
-            reservation_request.resources.remove(resource_name)
+            if all(feature in resource.features for feature in reservation_request.features):
+                feature_filtered_resources.append(resource_name)
+        candidate_resources = feature_filtered_resources
 
     laboratory = lde_config.laboratories[reservation_request.laboratory]
     if not laboratory.bypass_resource_health:
         broken_health = []
         healthy_or_unknown_resources = []
-        for resource_name in reservation_request.resources:
+        for resource_name in candidate_resources:
             health = get_resource_health(resource_name)
             if health.is_broken:
                 broken_health.append(health)
             else:
                 healthy_or_unknown_resources.append(resource_name)
 
-        if broken_health:
-            reservation_request.resources[:] = healthy_or_unknown_resources
-
-        if not reservation_request.resources:
+        if broken_health and not healthy_or_unknown_resources:
             messages = [
                 f"{health.resource}: {health.message or 'checker reported the resource as broken'}"
                 for health in broken_health
             ]
             message = "; ".join(messages) or "No resource is currently available"
             _store_terminal_reservation(
-                reservation_request=reservation_request,
+                reservation_request=reservation_request._replace(resources=candidate_resources),
                 status=ReservationKeys.states.broken,
                 message=message,
             )
@@ -150,10 +144,12 @@ def add_reservation(reservation_request: ReservationRequest) -> ReservationStatu
                 message=message,
             )
 
-    if not reservation_request.resources:
+        candidate_resources = healthy_or_unknown_resources
+
+    if not candidate_resources:
         message = "No resource is currently available"
         _store_terminal_reservation(
-            reservation_request=reservation_request,
+            reservation_request=reservation_request._replace(resources=[]),
             status=ReservationKeys.states.unavailable,
             message=message,
         )
@@ -162,6 +158,8 @@ def add_reservation(reservation_request: ReservationRequest) -> ReservationStatu
             reservation_id=reservation_request.identifier,
             message=message,
         )
+
+    reservation_request = reservation_request._replace(resources=candidate_resources)
 
     if is_mongo_active():
         mongo.db.sessions.insert_one({
@@ -242,8 +240,17 @@ def cancel_reservation(user_identifier: str, reservation_id: str) -> bool:
     if reservation_id not in reservation_identifiers:
         return False
 
+    reservation_key = ReservationKeys(reservation_id).base()
+    current_status = redis_store.hget(reservation_key, ReservationKeys.parameters.status)
+    if current_status is None:
+        redis_store.srem(UserKeys(user_identifier).reservations(), reservation_id)
+        return False
+
+    if current_status in ReservationKeys.states.finished_states:
+        return True
+
     pipeline = redis_store.pipeline()
-    pipeline.hset(ReservationKeys(reservation_id).base(), ReservationKeys.parameters.status, ReservationKeys.states.cancelling)
+    pipeline.hset(reservation_key, ReservationKeys.parameters.status, ReservationKeys.states.cancelling)
     pipeline.publish(ReservationKeys(reservation_id).channel(), ReservationKeys.states.cancelling)
     pipeline.execute()
     return True

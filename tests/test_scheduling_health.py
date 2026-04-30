@@ -1,10 +1,11 @@
 import unittest
+import json
 from types import SimpleNamespace
 from unittest import mock
 
 from labdiscoveryengine.scheduling.data import ReservationRequest, ReservationStatus, ResourceHealth
 from labdiscoveryengine.scheduling.keys import ReservationKeys
-from labdiscoveryengine.scheduling.sync.web_api import add_reservation
+from labdiscoveryengine.scheduling.sync.web_api import add_reservation, cancel_reservation
 
 
 def _reservation_request(resources):
@@ -95,6 +96,9 @@ class SchedulingHealthTestCase(unittest.TestCase):
         self.assertEqual(ReservationKeys.states.broken, result.status)
         self.assertIn("no-loop", result.message)
         self.assertIn("no-movement", result.message)
+        hset_call = next(call for call in pipeline.calls if call[0] == "hset")
+        metadata = json.loads(hset_call[2]["mapping"][ReservationKeys.parameters.metadata])
+        self.assertEqual(["robot-1", "robot-2"], metadata["resources"])
         store_reservation.assert_not_called()
 
     def test_bypass_laboratory_keeps_broken_resources(self):
@@ -113,3 +117,21 @@ class SchedulingHealthTestCase(unittest.TestCase):
         self.assertEqual(ReservationKeys.states.queued, result.status)
         stored_request = store_reservation.call_args.args[0]
         self.assertEqual(["robot-1"], stored_request.resources)
+
+    def test_cancel_reservation_does_not_move_terminal_reservation_to_cancelling(self):
+        with mock.patch("labdiscoveryengine.scheduling.sync.web_api.redis_store.smembers", return_value={"reservation-1"}, create=True), \
+                mock.patch("labdiscoveryengine.scheduling.sync.web_api.redis_store.hget", return_value=ReservationKeys.states.broken, create=True), \
+                mock.patch("labdiscoveryengine.scheduling.sync.web_api.redis_store.pipeline", create=True) as pipeline:
+            result = cancel_reservation("user-1", "reservation-1")
+
+        self.assertTrue(result)
+        pipeline.assert_not_called()
+
+    def test_cancel_reservation_removes_stale_user_entry(self):
+        with mock.patch("labdiscoveryengine.scheduling.sync.web_api.redis_store.smembers", return_value={"reservation-1"}, create=True), \
+                mock.patch("labdiscoveryengine.scheduling.sync.web_api.redis_store.hget", return_value=None, create=True), \
+                mock.patch("labdiscoveryengine.scheduling.sync.web_api.redis_store.srem", create=True) as srem:
+            result = cancel_reservation("user-1", "reservation-1")
+
+        self.assertFalse(result)
+        srem.assert_called_once()
