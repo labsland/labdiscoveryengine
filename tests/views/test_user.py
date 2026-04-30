@@ -36,8 +36,18 @@ class UserTestCase(unittest.TestCase):
 
     def test_lab_without_image_does_not_render_broken_image(self):
         self._login_as_admin()
+        self.app.config['INSTITUTION_LOGO'] = ''
 
         response = self.client.get('/user/')
+
+        self.assertEqual(200, response.status_code)
+        html = response.get_data(as_text=True)
+        self.assertNotIn('src=""', html)
+
+    def test_public_page_without_images_does_not_render_broken_image(self):
+        self.app.config['INSTITUTION_LOGO'] = ''
+
+        response = self.client.get('/public/')
 
         self.assertEqual(200, response.status_code)
         html = response.get_data(as_text=True)

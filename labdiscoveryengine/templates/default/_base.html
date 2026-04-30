@@ -63,9 +63,11 @@
                     <img src="{{ url_for('static', filename='images/labdiscoveryengine.png') }}"
                          alt="LabDiscoveryEngine logo" height="100">
                 </a>
-                <a href="{{ config['INSTITUTION_URL'] }}" target="_blank">
-                    <img src="{{ config['INSTITUTION_LOGO'] }}" alt="{{ config['INSTITUTION_NAME'] }}" height="100">
-                </a>
+                {% if config['INSTITUTION_LOGO'] %}
+                    <a href="{{ config['INSTITUTION_URL'] }}" target="_blank">
+                        <img src="{{ config['INSTITUTION_LOGO'] }}" alt="{{ config['INSTITUTION_NAME'] }}" height="100">
+                    </a>
+                {% endif %}
             </div>
         </div>
     </header>

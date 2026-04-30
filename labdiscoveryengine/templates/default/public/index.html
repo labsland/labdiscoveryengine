@@ -10,7 +10,9 @@
                 <div class="card h-100 d-flex flex-column">
                     <div class="card-header bg-primary text-white" style="box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
                         <h2 class="mb-0" style="font-size: 1.2em; font-weight: 600;">
+                            {% if lab.image %}
                             <img src="{{ lab.image }}" alt="{{ lab.display_name }} Icon" height="30" style="border: 2px solid white; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                            {% endif %}
                             {{ lab.display_name }}
                         </h2>
                     </div>
