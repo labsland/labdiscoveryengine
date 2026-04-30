@@ -76,3 +76,25 @@ class UserTestCase(unittest.TestCase):
         self.assertEqual(reservation_request.back_url, reservation_request.client_initial_data['back'])
         self.assertEqual(reservation_request.back_url, reservation_request.client_initial_data['back_url'])
         self.assertEqual(reservation_request.back_url, reservation_request.client_initial_data['backUrl'])
+
+    @mock.patch("labdiscoveryengine.views.user.add_reservation")
+    def test_create_reservation_with_broken_status_returns_checker_message(self, add_reservation):
+        self._login_as_admin()
+        add_reservation.return_value = ReservationStatus(
+            status="broken",
+            reservation_id="reservation-1",
+            message="checker says broken",
+        )
+
+        response = self.client.post(
+            '/user/api/reservations/',
+            json={
+                'laboratory': 'dummy',
+                'group': 'All laboratories',
+                'resources': ['fpga-1'],
+            },
+        )
+
+        self.assertEqual(200, response.status_code)
+        self.assertEqual("broken", response.json["status"])
+        self.assertEqual("checker says broken", response.json["message"])

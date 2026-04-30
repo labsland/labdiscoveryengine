@@ -186,7 +186,9 @@ def create_reservation():
 
     reservation_status: ReservationStatus = add_reservation(reservation_request=reservation_request)
 
-    return jsonify(success=True, message='Reservation added', **reservation_status.todict())
+    response_data = reservation_status.todict()
+    response_data.setdefault('message', 'Reservation added')
+    return jsonify(success=True, **response_data)
 
 
 @user_blueprint.route('/api/reservations/<reservation_id>', methods=['GET'])

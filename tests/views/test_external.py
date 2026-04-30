@@ -74,3 +74,27 @@ class ExternalTestCase(unittest.TestCase):
         add_reservation.assert_called_once()
         reservation_request = add_reservation.call_args.kwargs["reservation_request"]
         self.assertEqual(["fpga-1"], reservation_request.resources)
+
+    @patch("labdiscoveryengine.views.external.add_reservation")
+    def test_create_reservation_with_broken_status_returns_checker_message(self, add_reservation):
+        add_reservation.return_value = ReservationStatus(
+            status="broken",
+            reservation_id="reservation-1",
+            message="checker says broken",
+        )
+
+        response = self.client.post(
+            "/external/v1/reservations/",
+            headers=self._auth_headers(),
+            json={
+                "laboratory": "dummy",
+                "resources": ["fpga-1"],
+                "userIdentifier": "tester",
+                "backUrl": "https://example.invalid/back",
+            },
+        )
+
+        self.assertEqual(200, response.status_code)
+        self.assertTrue(response.json["success"])
+        self.assertEqual("broken", response.json["status"])
+        self.assertEqual("checker says broken", response.json["message"])
