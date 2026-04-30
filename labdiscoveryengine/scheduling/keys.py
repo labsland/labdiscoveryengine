@@ -20,6 +20,7 @@ class ReservationKeys:
         resource = 'resource'
         url = 'url'
         session_id = 'session_id'
+        message = 'message'
 
     class states:
         pending = 'pending'
@@ -52,6 +53,9 @@ class ResourceKeys:
     
     def assigned(self) -> str:
         return f"{self.base()}:assigned"
+
+    def health(self) -> str:
+        return f"{self.base()}:health"
     
     def base(self) -> str:
         return f"{Keys.base()}:resources:{self.resource_id}"

@@ -50,9 +50,16 @@ class HttpHealthcheck(Healthcheck):
     """
     A healthcheck is a HTTP call to the laboratory.
     """
-    def __init__(self, identifier: str, url: str):
+    def __init__(self, identifier: str, url: str, timeout: float = 10):
         self.identifier: str = identifier
         self.url: str = url
+        self.timeout: float = timeout
+
+class RobotcheckerHealthcheck(HttpHealthcheck):
+    """
+    A healthcheck that understands the robotchecker /status/<name>/ JSON shape.
+    """
+    pass
 
 class Camera:
     """
@@ -106,3 +113,4 @@ class Laboratory(NamedTuple):
     resources: Set[str]
     image: str
     features: Set[str]
+    bypass_resource_health: bool = False

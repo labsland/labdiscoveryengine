@@ -153,6 +153,9 @@ class WebLabLibResourceClient(AbstractResourceClient):
         now = datetime.datetime.now(datetime.timezone.utc)
         laboratory = lde_config.laboratories[reservation_request.laboratory]
         client_initial_data = dict(reservation_request.client_initial_data or {})
+        client_initial_data.setdefault('back', reservation_request.back_url)
+        client_initial_data.setdefault('back_url', reservation_request.back_url)
+        client_initial_data.setdefault('backUrl', reservation_request.back_url)
         return {
             'client_initial_data': client_initial_data,
             'server_initial_data': {

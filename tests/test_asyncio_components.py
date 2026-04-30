@@ -4,9 +4,10 @@ from unittest import mock
 
 from labdiscoveryengine.data import Resource
 from labdiscoveryengine.scheduling.asyncio.client import WebLabLibResourceClient
+from labdiscoveryengine.scheduling.asyncio.healthcheck_worker import ResourceHealthchecksWorker
 from labdiscoveryengine.scheduling.asyncio.redis import aioredis_store
 from labdiscoveryengine.scheduling.asyncio.resource_worker import ResourceWorker
-from labdiscoveryengine.scheduling.data import ReservationRequest
+from labdiscoveryengine.scheduling.data import ReservationRequest, ResourceHealth
 
 
 class ResourceWorkerTestCase(unittest.IsolatedAsyncioTestCase):
@@ -69,11 +70,57 @@ class WebLabLibResourceClientTestCase(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(
             body["client_initial_data"],
-            {"board_ui": "Boolean", "user_interface": "simulation:parking"},
+            {
+                "board_ui": "Boolean",
+                "user_interface": "simulation:parking",
+                "back": "https://back.example",
+                "back_url": "https://back.example",
+                "backUrl": "https://back.example",
+            },
         )
         self.assertEqual(body["server_initial_data"]["request.locale"], "en")
         self.assertEqual(body["server_initial_data"]["request.username"], "student-1")
         self.assertEqual(body["back"], "https://back.example")
+
+    async def test_start_body_preserves_explicit_client_back_values(self):
+        resource = Resource(
+            identifier="resource-1",
+            url="https://resource.example",
+            login="user",
+            password="pass",
+            features=[],
+            cameras=[],
+            healthchecks=[],
+            api="weblablib-v1.0",
+        )
+        reservation_request = ReservationRequest(
+            identifier="reservation-1",
+            laboratory="boolean-lab",
+            features=[],
+            resources=["resource-1"],
+            user_identifier="external-system",
+            user_role="external",
+            locale="en",
+            max_time=180,
+            back_url="https://back.example",
+            client_initial_data={"back": "https://custom.example/back"},
+        )
+        fake_config = SimpleNamespace(
+            laboratories={
+                "boolean-lab": SimpleNamespace(identifier="booleanfpga", category="FPGA experiments")
+            }
+        )
+
+        with mock.patch("labdiscoveryengine.scheduling.asyncio.client.lde_config", fake_config):
+            client = WebLabLibResourceClient(resource)
+            try:
+                body = client._get_start_body(reservation_request)
+            finally:
+                await client.client_session.close()
+
+        self.assertEqual(body["client_initial_data"]["back"], "https://custom.example/back")
+        self.assertEqual(body["client_initial_data"]["back_url"], "https://back.example")
+        self.assertEqual(body["client_initial_data"]["backUrl"], "https://back.example")
 
 
 class ReservationRequestTestCase(unittest.TestCase):
@@ -95,3 +142,57 @@ class ReservationRequestTestCase(unittest.TestCase):
 
         self.assertEqual(restored.client_initial_data, {"board_ui": "Boolean", "showSerial": True})
         self.assertEqual(restored.identifier, original.identifier)
+
+
+class ResourceHealthchecksWorkerTestCase(unittest.IsolatedAsyncioTestCase):
+    async def test_robotchecker_success_payload_is_healthy(self):
+        worker = object.__new__(ResourceHealthchecksWorker)
+        worker.resource_name = "resource-1"
+
+        healthcheck = SimpleNamespace(identifier="checker", url="https://checker.example", timeout=10)
+        response = mock.AsyncMock()
+        response.status = 200
+        response.json.return_value = {"found": True, "success": True}
+        session = mock.MagicMock()
+        session.get.return_value.__aenter__.return_value = response
+
+        with mock.patch("labdiscoveryengine.scheduling.asyncio.healthcheck_worker.aiohttp.ClientSession") as client_session:
+            client_session.return_value.__aenter__.return_value = session
+            health = await worker._run_robotchecker_healthcheck(healthcheck)
+
+        self.assertEqual(ResourceHealth.states.healthy, health.status)
+
+    async def test_robotchecker_failure_payload_is_broken(self):
+        worker = object.__new__(ResourceHealthchecksWorker)
+        worker.resource_name = "resource-1"
+
+        healthcheck = SimpleNamespace(identifier="checker", url="https://checker.example", timeout=10)
+        response = mock.AsyncMock()
+        response.status = 200
+        response.json.return_value = {"found": True, "success": False, "message": "no-loop"}
+        session = mock.MagicMock()
+        session.get.return_value.__aenter__.return_value = response
+
+        with mock.patch("labdiscoveryengine.scheduling.asyncio.healthcheck_worker.aiohttp.ClientSession") as client_session:
+            client_session.return_value.__aenter__.return_value = session
+            health = await worker._run_robotchecker_healthcheck(healthcheck)
+
+        self.assertEqual(ResourceHealth.states.broken, health.status)
+        self.assertEqual("no-loop", health.message)
+
+    async def test_robotchecker_missing_payload_is_unknown(self):
+        worker = object.__new__(ResourceHealthchecksWorker)
+        worker.resource_name = "resource-1"
+
+        healthcheck = SimpleNamespace(identifier="checker", url="https://checker.example", timeout=10)
+        response = mock.AsyncMock()
+        response.status = 200
+        response.json.return_value = {"found": False}
+        session = mock.MagicMock()
+        session.get.return_value.__aenter__.return_value = response
+
+        with mock.patch("labdiscoveryengine.scheduling.asyncio.healthcheck_worker.aiohttp.ClientSession") as client_session:
+            client_session.return_value.__aenter__.return_value = session
+            health = await worker._run_robotchecker_healthcheck(healthcheck)
+
+        self.assertEqual(ResourceHealth.states.unknown, health.status)

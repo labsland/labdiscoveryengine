@@ -12,6 +12,7 @@ from flask_admin.model import filters
 
 from labdiscoveryengine import mongo, db
 from labdiscoveryengine.models import GroupPermission, User, Group
+from labdiscoveryengine.scheduling.sync.web_api import get_all_resource_health
 from labdiscoveryengine.utils import lde_config, slugify, is_mongo_active, is_sql_active
 
 class AuthMixIn:
@@ -38,7 +39,8 @@ class MainIndexView(AuthMixIn, AdminIndexView):
     def index(self):
         mongo_active = is_mongo_active()
         sql_active = is_sql_active()
-        return self.render('lde-admin/index.html', mongo_active=mongo_active, sql_active=sql_active)
+        resource_health = get_all_resource_health()
+        return self.render('lde-admin/index.html', mongo_active=mongo_active, sql_active=sql_active, resource_health=resource_health)
 
 class NoPyMongoView(AuthMixIn, BaseView):
     @expose('/')

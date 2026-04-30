@@ -75,9 +75,10 @@ class ReservationStatusLuaScriptTestCase(unittest.TestCase):
         self.redis.sadd(f"{reservation_key}:resources", "boolean-s1i3")
         self.redis.zadd("lde:resources:boolean-s1i3:queues:priorities", {"normal": 0})
 
-        status, external_session_id, position, url = self.script(args=[reservation_id])
+        status, external_session_id, position, url, message = self.script(args=[reservation_id])
 
         self.assertEqual("pending", status)
         self.assertFalse(external_session_id)
         self.assertFalse(position)
         self.assertFalse(url)
+        self.assertFalse(message)

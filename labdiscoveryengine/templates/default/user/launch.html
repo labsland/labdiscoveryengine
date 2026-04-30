@@ -1,0 +1,88 @@
+{% extends "default/user/_base.html" %}
+
+{% block container %}
+<div class="col">
+    <h3>{{ gettext("Accessing") }}</h3>
+    <p id="launch-message">{{ gettext("Starting reserve process...") }}</p>
+</div>
+{% endblock %}
+
+{% block tail %}
+<script>
+    var API_URL = {{ url_for(".api")|tojson }};
+    var LABORATORY = {{ laboratory|tojson }};
+    var GROUP = {{ group|tojson }};
+    var RESOURCE = {{ resource|tojson }};
+    var RESERVE_STARTING_MESSAGE = {{ gettext("Starting reserve process...")|tojson }};
+    var RESERVE_WAITING_MESSAGE = {{ gettext("Waiting to be ready...")|tojson }};
+    var RESERVE_FINISHED_MESSAGE = {{ gettext("Reservation finished...")|tojson }};
+    var RESERVE_READY_MESSAGE = {{ gettext("Reservation is ready. Redirecting...")|tojson }};
+    var RESERVE_QUEUED = {{ gettext("Reservation is queued in position {pos}...")|tojson }};
+    var BROKEN_FINISHED_MESSAGE = {{ gettext("Reservation cancelled: no resource was available.")|tojson }};
+
+    function setLaunchMessage(message) {
+        $("#launch-message").text(message);
+    }
+
+    function processGetReservationSuccess(response) {
+        var previousState = "?previous_status=" + response.status;
+        if (response.status === "ready") {
+            setLaunchMessage(RESERVE_READY_MESSAGE);
+            location.href = response.url;
+            return;
+        } else if (response.status === "queued") {
+            setLaunchMessage(RESERVE_QUEUED.replace("{pos}", response.position));
+            previousState = previousState + "&previous_position=" + response.position;
+        } else if (response.status === "initializing") {
+            setLaunchMessage(RESERVE_STARTING_MESSAGE);
+        } else if (response.status === "pending") {
+            setLaunchMessage(RESERVE_WAITING_MESSAGE);
+        } else if (response.status === "finished") {
+            setLaunchMessage(RESERVE_FINISHED_MESSAGE);
+        } else if (response.status === "broken" || response.status === "unavailable") {
+            setLaunchMessage(response.message || BROKEN_FINISHED_MESSAGE);
+            return;
+        } else {
+            setLaunchMessage(response.status);
+        }
+
+        $.ajax({
+            url: API_URL + "reservations/" + response.reservation_id + previousState,
+            type: "GET"
+        }).done(function (response) {
+            if (response.success) {
+                processGetReservationSuccess(response);
+            } else {
+                setLaunchMessage(response.message || response.status);
+            }
+        }).fail(function (response) {
+            setLaunchMessage(response.responseJSON && response.responseJSON.message || response.statusText);
+        });
+    }
+
+    $(document).ready(function () {
+        var requestData = {
+            laboratory: LABORATORY,
+            group: GROUP
+        };
+        if (RESOURCE) {
+            requestData.resources = [RESOURCE];
+        }
+
+        $.ajax({
+            url: API_URL + "reservations/",
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify(requestData),
+        }).done(function (response) {
+            if (response.success) {
+                processGetReservationSuccess(response);
+            } else {
+                setLaunchMessage(response.message || response.status);
+            }
+        }).fail(function (response) {
+            setLaunchMessage(response.responseJSON && response.responseJSON.message || response.statusText);
+        });
+    });
+</script>
+{% endblock %}

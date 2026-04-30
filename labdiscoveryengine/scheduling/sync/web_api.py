@@ -10,10 +10,10 @@ from typing import List, Dict, Optional
 from flask import Flask
 from flask_redis import FlaskRedis
 
-from labdiscoveryengine.scheduling.keys import ReservationKeys, UserKeys
+from labdiscoveryengine.scheduling.keys import ReservationKeys, ResourceKeys, UserKeys
 from labdiscoveryengine import mongo
 
-from ..data import ReservationRequest, ReservationStatus
+from ..data import ReservationRequest, ReservationStatus, ResourceHealth
 from ..redis_scripts import ScriptNames, SCRIPT_FILES
 
 from labdiscoveryengine.utils import is_mongo_active, lde_config
@@ -74,10 +74,24 @@ class SyncLuaScripts:
         Get the reservation status in an adequate class
         """
         result = self._run_lua_script(ScriptNames.get_reservation_status, args=[reservation_id])
-        status, external_session_id, position, url = result
-        return ReservationStatus(status=status, reservation_id=reservation_id, external_session_id=external_session_id, position=position, url=url)
+        status, external_session_id, position, url, message = result
+        return ReservationStatus(status=status, reservation_id=reservation_id, external_session_id=external_session_id, position=position, url=url, message=message)
 
 sync_lua_scripts = SyncLuaScripts()
+
+
+def get_resource_health(resource_name: str) -> ResourceHealth:
+    return ResourceHealth.fromdict(
+        resource=resource_name,
+        data=redis_store.hgetall(ResourceKeys(resource_name).health()),
+    )
+
+
+def get_all_resource_health() -> Dict[str, ResourceHealth]:
+    return {
+        resource_name: get_resource_health(resource_name)
+        for resource_name in lde_config.resources
+    }
 
 
 def initialize_web(app: Flask):
@@ -105,6 +119,50 @@ def add_reservation(reservation_request: ReservationRequest) -> ReservationStatu
         for resource_name in resources_to_remove:
             reservation_request.resources.remove(resource_name)
 
+    laboratory = lde_config.laboratories[reservation_request.laboratory]
+    if not laboratory.bypass_resource_health:
+        broken_health = []
+        healthy_or_unknown_resources = []
+        for resource_name in reservation_request.resources:
+            health = get_resource_health(resource_name)
+            if health.is_broken:
+                broken_health.append(health)
+            else:
+                healthy_or_unknown_resources.append(resource_name)
+
+        if broken_health:
+            reservation_request.resources[:] = healthy_or_unknown_resources
+
+        if not reservation_request.resources:
+            messages = [
+                f"{health.resource}: {health.message or 'checker reported the resource as broken'}"
+                for health in broken_health
+            ]
+            message = "; ".join(messages) or "No resource is currently available"
+            _store_terminal_reservation(
+                reservation_request=reservation_request,
+                status=ReservationKeys.states.broken,
+                message=message,
+            )
+            return ReservationStatus(
+                status=ReservationKeys.states.broken,
+                reservation_id=reservation_request.identifier,
+                message=message,
+            )
+
+    if not reservation_request.resources:
+        message = "No resource is currently available"
+        _store_terminal_reservation(
+            reservation_request=reservation_request,
+            status=ReservationKeys.states.unavailable,
+            message=message,
+        )
+        return ReservationStatus(
+            status=ReservationKeys.states.unavailable,
+            reservation_id=reservation_request.identifier,
+            message=message,
+        )
+
     if is_mongo_active():
         mongo.db.sessions.insert_one({
             "reservation_id": reservation_request.identifier,
@@ -128,6 +186,26 @@ def add_reservation(reservation_request: ReservationRequest) -> ReservationStatu
 
     sync_lua_scripts.store_reservation(reservation_request)
     return sync_lua_scripts.get_reservation_status(reservation_request.identifier)
+
+
+def _store_terminal_reservation(reservation_request: ReservationRequest, status: str, message: str):
+    reservation_id = reservation_request.identifier
+    reservation_keys = ReservationKeys(reservation_id)
+    user_reservations_key = UserKeys(reservation_request.user_identifier).reservations()
+    metadata = json.dumps(reservation_request.todict())
+
+    pipeline = redis_store.pipeline()
+    pipeline.hset(reservation_keys.base(), mapping={
+        ReservationKeys.parameters.status: status,
+        ReservationKeys.parameters.laboratory: reservation_request.laboratory,
+        ReservationKeys.parameters.metadata: metadata,
+        ReservationKeys.parameters.message: message,
+    })
+    pipeline.expire(reservation_keys.base(), 3600)
+    pipeline.sadd(user_reservations_key, reservation_id)
+    pipeline.expire(user_reservations_key, 3600)
+    pipeline.publish(reservation_keys.channel(), status)
+    pipeline.execute()
 
 def get_reservation_status(username: str, reservation_id: str, previous_reservation_status: Optional[ReservationStatus] = None, max_time: float = 20) -> Optional[ReservationStatus]:
     """

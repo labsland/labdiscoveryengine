@@ -4,6 +4,7 @@ from pathlib import Path
 
 from flask import Flask
 
+from labdiscoveryengine.data import RobotcheckerHealthcheck
 from labdiscoveryengine.configuration.storage import get_latest_configuration
 
 
@@ -28,6 +29,11 @@ class ConfigurationStorageTestCase(unittest.TestCase):
                         "resource-1:",
                         "  url: http://example.invalid/lab",
                         "  features: ['boolean']",
+                        "  healthchecks:",
+                        "    checker:",
+                        "      type: robotchecker",
+                        "      url: https://checker.example/status/robot-1/",
+                        "      timeout: 25",
                         "",
                     ]
                 ),
@@ -38,6 +44,7 @@ class ConfigurationStorageTestCase(unittest.TestCase):
                     [
                         "boolean-lab:",
                         "  display_name: Boolean lab",
+                        "  bypass_resource_health: true",
                         "  resources:",
                         "    - resource-1",
                         "",
@@ -70,4 +77,6 @@ class ConfigurationStorageTestCase(unittest.TestCase):
             self.assertEqual("default-user", config.resources["resource-1"].login)
             self.assertEqual("default-pass", config.resources["resource-1"].password)
             self.assertEqual(180, config.laboratories["boolean-lab"].max_time)
-
+            self.assertTrue(config.laboratories["boolean-lab"].bypass_resource_health)
+            self.assertIsInstance(config.resources["resource-1"].healthchecks[0], RobotcheckerHealthcheck)
+            self.assertEqual(25, config.resources["resource-1"].healthchecks[0].timeout)

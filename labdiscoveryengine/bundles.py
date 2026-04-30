@@ -5,6 +5,11 @@ BOOTSTRAP_VERSION = '5.3.1'
 CSS_FILTER = 'cssmin'
 JS_FILTER = 'jsmin'
 
+def _register_bundle(assets: Environment, name: str, bundle: Bundle):
+    if name in assets:
+        assets._named_bundles.pop(name, None)
+    assets.register(name, bundle)
+
 
 def register_bundles(assets: Environment):
     """
@@ -21,8 +26,8 @@ def register_bundles(assets: Environment):
             filters=JS_FILTER,
             output="gen/bootstrap-" + BOOTSTRAP_VERSION + "/js/bootstrap.%(version)s.min.js")
 
-    assets.register('bootstrap_css', bootstrap_css)
-    assets.register('bootstrap_js', bootstrap_js)
+    _register_bundle(assets, 'bootstrap_css', bootstrap_css)
+    _register_bundle(assets, 'bootstrap_js', bootstrap_js)
 
 
     fontawesome_css = Bundle(
@@ -35,14 +40,12 @@ def register_bundles(assets: Environment):
             filters=JS_FILTER,
             output="gen/fontawesome/js/all.%(version)s.min.js")
 
-    assets.register('fontawesome_css', fontawesome_css)
-    assets.register('fontawesome_js', fontawesome_js)
+    _register_bundle(assets, 'fontawesome_css', fontawesome_css)
+    _register_bundle(assets, 'fontawesome_js', fontawesome_js)
 
     vendor_js = Bundle(
             "node_modules/jquery/dist/jquery.min.js",
             filters=JS_FILTER,
             output="gen/vendor.%(version)s.min.js")
 
-    assets.register('vendor_js', vendor_js)
-
-
+    _register_bundle(assets, 'vendor_js', vendor_js)

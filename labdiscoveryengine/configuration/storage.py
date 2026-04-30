@@ -14,7 +14,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 from labdiscoveryengine.configuration.exc import ConfigurationDirectoryNotFoundError, ConfigurationFileNotFoundError, InvalidConfigurationFoundError, InvalidConfigurationValueError, InvalidLaboratoryConfigurationError, InvalidUsernameConfigurationError
 
-from ..data import Administrator, Camera, ExternalUser, Healthcheck, HttpHealthcheck, ImageCamera, Laboratory, Resource
+from ..data import Administrator, Camera, ExternalUser, Healthcheck, HttpHealthcheck, ImageCamera, Laboratory, Resource, RobotcheckerHealthcheck
 
 
 # Define a custom representer for OrderedDict
@@ -212,7 +212,8 @@ def get_latest_configuration(configuration: Optional[StoredConfiguration] = None
                     max_time=laboratory_data.get('max_time') or get_config('DEFAULT_MAX_TIME'),
                     resources=resources,
                     features=features,
-                    image=laboratory_data.get('image', '')
+                    image=laboratory_data.get('image', ''),
+                    bypass_resource_health=bool(laboratory_data.get('bypass_resource_health', False)),
                 )
                 configuration.laboratories[identifier] = laboratories[identifier]
                 
@@ -289,10 +290,17 @@ def _parse_healthchecks_config(config: Optional[dict]) -> List[Healthcheck]:
     for healthcheck_identifier, healthcheck_properties in config.items():
         if isinstance(healthcheck_properties, str):
             healthcheck_url = healthcheck_properties
+            healthcheck_type = 'http'
+            timeout = 10
         else:
-            # In the future we can add more types depending on the properties
+            healthcheck_type = healthcheck_properties.get('type') or 'http'
             healthcheck_url = healthcheck_properties.get('url')
-        result.append(HttpHealthcheck(identifier=healthcheck_identifier, url=healthcheck_url))
+            timeout = float(healthcheck_properties.get('timeout') or 10)
+
+        if healthcheck_type == 'robotchecker':
+            result.append(RobotcheckerHealthcheck(identifier=healthcheck_identifier, url=healthcheck_url, timeout=timeout))
+        else:
+            result.append(HttpHealthcheck(identifier=healthcheck_identifier, url=healthcheck_url, timeout=timeout))
 
     return result
 

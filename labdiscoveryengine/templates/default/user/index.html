@@ -21,7 +21,9 @@
                     <div class="card h-100 d-flex flex-column">
                         <div class="card-header bg-primary text-white" style="box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
                             <h2 class="mb-0" style="font-size: 1.2em; font-weight: 600;">
+                                {% if lab.image %}
                                 <img src="{{ lab.image }}" alt="{{ lab.display_name }} Icon" height="30" style="border: 2px solid white; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                {% endif %}
                                 {{ lab.display_name }}
                             </h2>
                         </div>
@@ -76,7 +78,7 @@
                                                         {{ gettext("No feature") }}
                                                     {% endif %}
                                                 </td>
-                                                <td><button data-laboratory="{{ lab.identifier }}" data-resource="{{ resource }}" data-group="{{ group['name'] }}" class="btn btn-secondary btn-sm access-btn resource-access-btn"><i class="fas fa-download icon-normal"></i><i class="fas fa-spin fa-spinner icon-spin" style="display: none"></i> <span>{{ gettext("Access") }}</span></button></td>
+                                                <td><a href="{{ url_for('.launch', laboratory=lab.identifier, group=group['name'], resource=resource) }}" class="btn btn-secondary btn-sm resource-access-btn"><i class="fas fa-download icon-normal"></i> <span>{{ gettext("Access") }}</span></a></td>
                                             </tr>
                                             {% endfor %}
                                         </tbody>
@@ -183,8 +185,8 @@
             $(messageDomIdentifier).text(RESERVE_WAITING_MESSAGE);
         } else if (response.status === "finished") {
             $(messageDomIdentifier).text(RESERVE_FINISHED_MESSAGE);
-        } else if (response.status === "broken") {
-            $(messageDomIdentifier).text(BROKEN_FINISHED_MESSAGE);
+        } else if (response.status === "broken" || response.status === "unavailable") {
+            $(messageDomIdentifier).text(response.message || BROKEN_FINISHED_MESSAGE);
             return;
         } else {
             $(messageDomIdentifier).text(response.status);

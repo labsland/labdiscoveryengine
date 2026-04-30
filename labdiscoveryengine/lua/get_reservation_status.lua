@@ -13,10 +13,12 @@ local reservation_id = ARGV[1]
 local external_session_id = nil
 local position = nil
 local url = nil
+local message = nil
 
 local reservation_key = "lde:reservations:" .. reservation_id
 
 local status = redis.call("hget", reservation_key, "status")
+message = redis.call("hget", reservation_key, "message")
 
 if status == "pending" or status == "queued" then
 
@@ -68,4 +70,4 @@ elseif status == "ready" or status == "cancelling" or status == "finishing" then
 end
 
 
-return { status or false, external_session_id or false, position or false, url or false }
+return { status or false, external_session_id or false, position or false, url or false, message or false }

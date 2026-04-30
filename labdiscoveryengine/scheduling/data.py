@@ -90,6 +90,7 @@ class ReservationStatus(NamedTuple):
     external_session_id: Optional[str] = None
     position: Optional[int] = None
     url: Optional[str] = None
+    message: Optional[str] = None
 
     def has_changed_from(self, previous_status: 'ReservationStatus') -> bool:
         # We only care of this two really
@@ -108,6 +109,9 @@ class ReservationStatus(NamedTuple):
             result['url'] = self.url
             result['external_session_id'] = self.external_session_id
 
+        if self.message:
+            result['message'] = self.message
+
         return result
     
     @staticmethod
@@ -118,4 +122,43 @@ class ReservationStatus(NamedTuple):
             external_session_id=data.get('external_session_id'),
             position=data.get('position'),
             url=data.get('url'),
+            message=data.get('message'),
+        )
+
+class ResourceHealth(NamedTuple):
+    resource: str
+    status: str
+    message: Optional[str] = None
+    source: Optional[str] = None
+    checked_at: Optional[str] = None
+
+    class states:
+        healthy = 'healthy'
+        broken = 'broken'
+        unknown = 'unknown'
+
+    @property
+    def is_broken(self) -> bool:
+        return self.status == self.states.broken
+
+    def todict(self) -> Dict[str, Optional[str]]:
+        return {
+            'resource': self.resource,
+            'status': self.status,
+            'message': self.message,
+            'source': self.source,
+            'checked_at': self.checked_at,
+        }
+
+    @staticmethod
+    def fromdict(resource: str, data: Dict[str, str]) -> 'ResourceHealth':
+        if not data:
+            return ResourceHealth(resource=resource, status=ResourceHealth.states.unknown)
+
+        return ResourceHealth(
+            resource=resource,
+            status=data.get('status') or ResourceHealth.states.unknown,
+            message=data.get('message') or None,
+            source=data.get('source') or None,
+            checked_at=data.get('checked_at') or None,
         )

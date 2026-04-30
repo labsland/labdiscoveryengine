@@ -1,5 +1,5 @@
 import secrets
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from flask import Blueprint, jsonify, request, session, redirect, url_for, g
 from flask_babel import gettext
 
@@ -46,6 +46,24 @@ def index():
     groups = _get_user_groups_and_labs()   
     return render_themed_template('user/index.html', groups=groups, laboratories=lde_config.laboratories.values(), resources=lde_config.resources)
 
+@user_blueprint.route('/launch')
+def launch():
+    laboratory = request.args.get('laboratory')
+    group = request.args.get('group')
+    resource = request.args.get('resource')
+
+    validation_error = _validate_laboratory_access(laboratory, group, [resource] if resource else [])
+    if validation_error is not None:
+        message, status_code = validation_error
+        return message, status_code
+
+    return render_themed_template(
+        'user/launch.html',
+        laboratory=laboratory,
+        group=group,
+        resource=resource,
+    )
+
 def _get_user_groups_and_labs():
     laboratories = lde_config.laboratories.values()
 
@@ -77,6 +95,40 @@ def _get_user_groups_and_labs():
                 })
     return groups
 
+def _validate_laboratory_access(laboratory: Optional[str], group: Optional[str], resources: List[str]) -> Optional[Tuple[str, int]]:
+    if not laboratory:
+        return gettext('Missing laboratory'), 400
+
+    if laboratory not in lde_config.laboratories:
+        return gettext('Laboratory does not exist'), 400
+
+    user_groups = _get_user_groups_and_labs()
+    laboratories_by_group = {group_data['name']: group_data['laboratories_by_identifier'] for group_data in user_groups}
+
+    if group not in laboratories_by_group:
+        return gettext('Group does not exist'), 400
+
+    if laboratory not in laboratories_by_group[group]:
+        return gettext('Laboratory is not in group'), 400
+
+    laboratory_resources = set(lde_config.laboratories[laboratory].resources)
+    invalid_resources = [
+        resource
+        for resource in resources
+        if resource not in laboratory_resources
+    ]
+    if invalid_resources:
+        return gettext('Resource is not in laboratory'), 400
+
+    return None
+
+def _back_client_initial_data(back_url: str) -> dict:
+    return {
+        'back': back_url,
+        'back_url': back_url,
+        'backUrl': back_url,
+    }
+
 @user_blueprint.route("/api/")
 def api():
     return jsonify(success=True)
@@ -85,30 +137,18 @@ def api():
 def create_reservation():
     request_data = request.get_json(force=True, silent=True) or {}
     laboratory: Optional[str] = request_data.get('laboratory')
-    if not laboratory:
-        return jsonify(success=False, code='invalid-request', message='Missing laboratory'), 400
-    
-    if laboratory not in lde_config.laboratories:
-        # This would usually be a security issue, as external users will know the full list of laboratories (secret or not)
-        # However, in 99% of the cases, the LDE host trusts the external system, and it can help debugging distributed systems
-        return jsonify(success=False, code='invalid-request', message='Laboratory {laboratory} does not exist'), 400
-    
-    user_groups = _get_user_groups_and_labs()
-    laboratories_by_group = {group['name']: group['laboratories_by_identifier'] for group in user_groups}
-
     group = request_data.get('group')
-    if group not in laboratories_by_group:
-        return jsonify(success=False, code='invalid-request', message=f'Group {group} does not exist'), 400
-    
-    print(laboratories_by_group[group])
-    if laboratory not in laboratories_by_group[group]:
-        return jsonify(success=False, code='invalid-request', message=f'Laboratory {laboratory} is not in group {group}'), 400
 
     resources: Optional[str] = request_data.get('resources') or [] # Ok if empty
 
     for resource in resources:
         if not isinstance(resource, str):
             return jsonify(success=False, code='invalid-request', message=f'Invalid resource (must be string): {resource}'), 400
+
+    validation_error = _validate_laboratory_access(laboratory, group, resources)
+    if validation_error is not None:
+        message, status_code = validation_error
+        return jsonify(success=False, code='invalid-request', message=message), status_code
     
     if not resources:
         # If it adds no resources, it means that all resources are valid
@@ -128,6 +168,7 @@ def create_reservation():
         if user is not None:
             user_full_name = user.full_name
     
+    back_url = url_for(".index", _external=True) + f"#lab-{laboratory}"
     reservation_request = ReservationRequest(
         identifier=secrets.token_urlsafe(),
         group=group,
@@ -137,9 +178,10 @@ def create_reservation():
         user_identifier=g.username, 
         user_full_name=user_full_name,
         user_role=g.role,
-        back_url=url_for(".index", _external=True) + f"#lab-{laboratory}",
+        back_url=back_url,
         max_time=lde_config.laboratories[laboratory].max_time,
         locale=get_locale(),
+        client_initial_data=_back_client_initial_data(back_url),
     )
 
     reservation_status: ReservationStatus = add_reservation(reservation_request=reservation_request)

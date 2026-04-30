@@ -233,7 +233,7 @@ class ResourceReservationProcessor:
             # First, call the dispose method in the laboratory (as much as needed)
             should_finish: float = await self.client.finish(session_id)
             while should_finish > 0:
-                asyncio.sleep(should_finish)
+                await asyncio.sleep(should_finish)
                 should_finish = await self.client.finish(session_id)
 
         # Then mark that we are indeed finished

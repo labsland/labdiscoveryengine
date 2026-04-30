@@ -7,6 +7,7 @@ from typing import Dict
 logger = logging.getLogger(__name__)
 
 from labdiscoveryengine.scheduling.asyncio.resource_worker import ResourceWorker, initialize_worker
+from labdiscoveryengine.scheduling.asyncio.healthcheck_worker import ResourceHealthchecksWorker
 from labdiscoveryengine.scheduling.asyncio.redis import is_redis_flushed
 
 from labdiscoveryengine.utils import lde_config
@@ -15,6 +16,9 @@ import time
 class WorkerAggregator:
     def __init__(self):
         self.resource_workers: Dict[str, ResourceWorker] = {
+            # resource: task
+        }
+        self.healthcheck_workers: Dict[str, ResourceHealthchecksWorker] = {
             # resource: task
         }
         self.stopping = False
@@ -32,6 +36,8 @@ class WorkerAggregator:
                     if resource not in self.resource_workers:
                         self.resource_workers[resource] = ResourceWorker(resource)
                         await self.resource_workers[resource].start()
+                        self.healthcheck_workers[resource] = ResourceHealthchecksWorker(resource)
+                        await self.healthcheck_workers[resource].start()
                     
                     elif not self.resource_workers[resource].running() and not self.stopping:
                         logger.info(f"Resource {resource} was stopped. Restarting it...")
@@ -40,7 +46,9 @@ class WorkerAggregator:
                 for resource in self.resource_workers:
                     if resource not in lde_config.resources:
                         await self.resource_workers[resource].stop()
+                        await self.healthcheck_workers[resource].stop()
                         del self.resource_workers[resource]
+                        del self.healthcheck_workers[resource]
 
                 flushed = await is_redis_flushed()
                 if flushed:
@@ -58,6 +66,8 @@ class WorkerAggregator:
 
             for resource in self.resource_workers:
                 await self.resource_workers[resource].stop()
+            for resource in self.healthcheck_workers:
+                await self.healthcheck_workers[resource].stop()
 
             self.stopped = True
 
