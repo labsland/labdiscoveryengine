@@ -2,8 +2,21 @@
 
 {% block container %}
 <div class="col">
-    <h3>{{ gettext("Accessing") }}</h3>
-    <p id="launch-message">{{ gettext("Starting reserve process...") }}</p>
+    <div id="launch-card" class="card border-0 shadow-sm">
+        <div class="card-body p-4">
+            <div class="d-flex align-items-start gap-3">
+                <div id="launch-spinner" class="spinner-border text-primary flex-shrink-0" role="status" aria-hidden="true"></div>
+                <div class="flex-grow-1">
+                    <h3 id="launch-title" class="mb-2">{{ gettext("Accessing") }}</h3>
+                    <p id="launch-message" class="mb-2">{{ gettext("Starting reserve process...") }}</p>
+                    <pre id="launch-details" class="d-none bg-light border rounded p-3 mt-3 mb-0 small text-wrap"></pre>
+                    <div id="launch-actions" class="d-none mt-3">
+                        <a class="btn btn-primary" href="{{ url_for('.index') }}">{{ gettext("Back to laboratories") }}</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
@@ -19,9 +32,24 @@
     var RESERVE_READY_MESSAGE = {{ gettext("Reservation is ready. Redirecting...")|tojson }};
     var RESERVE_QUEUED = {{ gettext("Reservation is queued in position {pos}...")|tojson }};
     var BROKEN_FINISHED_MESSAGE = {{ gettext("Reservation cancelled: no resource was available.")|tojson }};
+    var RESOURCE_UNAVAILABLE_TITLE = {{ gettext("Resource unavailable")|tojson }};
+    var RESOURCE_UNAVAILABLE_MESSAGE = {{ gettext("This resource is currently marked as unavailable by the checker. Normal access avoids it until the checker reports it healthy again.")|tojson }};
+    var RESERVATION_ERROR_TITLE = {{ gettext("Reservation failed")|tojson }};
+    var TEST_ACCESS_HINT = {{ gettext("Use a test laboratory for diagnostic access to a broken robot.")|tojson }};
 
     function setLaunchMessage(message) {
         $("#launch-message").text(message);
+    }
+
+    function showTerminalError(title, message, details) {
+        $("#launch-card").addClass("border border-warning");
+        $("#launch-title").text(title);
+        $("#launch-spinner").removeClass("spinner-border text-primary").addClass("text-warning").html('<i class="fas fa-exclamation-triangle fa-2x"></i>');
+        $("#launch-message").text(message);
+        if (details) {
+            $("#launch-details").text(details).removeClass("d-none");
+        }
+        $("#launch-actions").removeClass("d-none");
     }
 
     function processGetReservationSuccess(response) {
@@ -40,7 +68,7 @@
         } else if (response.status === "finished") {
             setLaunchMessage(RESERVE_FINISHED_MESSAGE);
         } else if (response.status === "broken" || response.status === "unavailable") {
-            setLaunchMessage(response.message || BROKEN_FINISHED_MESSAGE);
+            showTerminalError(RESOURCE_UNAVAILABLE_TITLE, RESOURCE_UNAVAILABLE_MESSAGE, response.message || BROKEN_FINISHED_MESSAGE);
             return;
         } else {
             setLaunchMessage(response.status);
@@ -53,10 +81,10 @@
             if (response.success) {
                 processGetReservationSuccess(response);
             } else {
-                setLaunchMessage(response.message || response.status);
+                showTerminalError(RESERVATION_ERROR_TITLE, response.message || response.status || BROKEN_FINISHED_MESSAGE, TEST_ACCESS_HINT);
             }
         }).fail(function (response) {
-            setLaunchMessage(response.responseJSON && response.responseJSON.message || response.statusText);
+            showTerminalError(RESERVATION_ERROR_TITLE, response.responseJSON && response.responseJSON.message || response.statusText, TEST_ACCESS_HINT);
         });
     }
 
@@ -78,10 +106,10 @@
             if (response.success) {
                 processGetReservationSuccess(response);
             } else {
-                setLaunchMessage(response.message || response.status);
+                showTerminalError(RESERVATION_ERROR_TITLE, response.message || response.status || BROKEN_FINISHED_MESSAGE, TEST_ACCESS_HINT);
             }
         }).fail(function (response) {
-            setLaunchMessage(response.responseJSON && response.responseJSON.message || response.statusText);
+            showTerminalError(RESERVATION_ERROR_TITLE, response.responseJSON && response.responseJSON.message || response.statusText, TEST_ACCESS_HINT);
         });
     });
 </script>

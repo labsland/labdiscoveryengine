@@ -180,6 +180,50 @@ class ResourceHealthchecksWorkerTestCase(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(ResourceHealth.states.broken, health.status)
         self.assertEqual("no-loop", health.message)
 
+    async def test_robotchecker_failure_payload_formats_dict_repr_message(self):
+        worker = object.__new__(ResourceHealthchecksWorker)
+        worker.resource_name = "resource-1"
+
+        healthcheck = SimpleNamespace(identifier="checker", url="https://checker.example", timeout=10)
+        response = mock.AsyncMock()
+        response.status = 200
+        response.json.return_value = {
+            "found": True,
+            "success": False,
+            "message": "{'message': 'The robot has not done a single loop.', 'result': 'error', 'code': 'no-loop'}",
+        }
+        session = mock.MagicMock()
+        session.get.return_value.__aenter__.return_value = response
+
+        with mock.patch("labdiscoveryengine.scheduling.asyncio.healthcheck_worker.aiohttp.ClientSession") as client_session:
+            client_session.return_value.__aenter__.return_value = session
+            health = await worker._run_robotchecker_healthcheck(healthcheck)
+
+        self.assertEqual(ResourceHealth.states.broken, health.status)
+        self.assertEqual("The robot has not done a single loop. (no-loop)", health.message)
+
+    async def test_robotchecker_failure_payload_keeps_plain_message(self):
+        worker = object.__new__(ResourceHealthchecksWorker)
+        worker.resource_name = "resource-1"
+
+        healthcheck = SimpleNamespace(identifier="checker", url="https://checker.example", timeout=10)
+        response = mock.AsyncMock()
+        response.status = 200
+        response.json.return_value = {
+            "found": True,
+            "success": False,
+            "message": "Expecting value: line 1 column 1 (char 0)",
+        }
+        session = mock.MagicMock()
+        session.get.return_value.__aenter__.return_value = response
+
+        with mock.patch("labdiscoveryengine.scheduling.asyncio.healthcheck_worker.aiohttp.ClientSession") as client_session:
+            client_session.return_value.__aenter__.return_value = session
+            health = await worker._run_robotchecker_healthcheck(healthcheck)
+
+        self.assertEqual(ResourceHealth.states.broken, health.status)
+        self.assertEqual("Expecting value: line 1 column 1 (char 0)", health.message)
+
     async def test_robotchecker_missing_payload_is_unknown(self):
         worker = object.__new__(ResourceHealthchecksWorker)
         worker.resource_name = "resource-1"

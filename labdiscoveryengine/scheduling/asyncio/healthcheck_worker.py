@@ -1,4 +1,5 @@
 import asyncio
+import ast
 import datetime
 import logging
 from typing import Optional
@@ -12,6 +13,34 @@ from labdiscoveryengine.scheduling.keys import ResourceKeys
 from labdiscoveryengine.utils import lde_config
 
 logger = logging.getLogger(__name__)
+
+
+def format_robotchecker_message(message: Optional[str]) -> Optional[str]:
+    if not message:
+        return None
+
+    if not isinstance(message, str):
+        return str(message)
+
+    stripped_message = message.strip()
+    try:
+        parsed_message = ast.literal_eval(stripped_message)
+    except Exception:
+        return message
+
+    if not isinstance(parsed_message, dict):
+        return message
+
+    detail = parsed_message.get("message") or parsed_message.get("error")
+    code = parsed_message.get("code")
+    if detail and code:
+        return f"{detail} ({code})"
+    if detail:
+        return str(detail)
+    if code:
+        return str(code)
+    return message
+
 
 class ResourceHealthchecksWorker:
     """
@@ -110,7 +139,7 @@ class ResourceHealthchecksWorker:
         return ResourceHealth(
             resource=self.resource_name,
             status=ResourceHealth.states.broken,
-            message=payload.get("message") or f"{healthcheck.identifier}: checker reported failure",
+            message=format_robotchecker_message(payload.get("message")) or f"{healthcheck.identifier}: checker reported failure",
             source="robotchecker",
         )
 

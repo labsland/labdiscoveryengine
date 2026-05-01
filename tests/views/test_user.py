@@ -34,6 +34,18 @@ class UserTestCase(unittest.TestCase):
         self.assertIn('/user/launch?laboratory=dummy&amp;group=All+laboratories&amp;resource=fpga-1', html)
         self.assertIn('class="btn btn-secondary btn-sm resource-access-btn"', html)
 
+    def test_launch_page_has_terminal_error_ui(self):
+        self._login_as_admin()
+
+        response = self.client.get('/user/launch?laboratory=dummy&group=All+laboratories&resource=fpga-1')
+
+        self.assertEqual(200, response.status_code)
+        html = response.get_data(as_text=True)
+        self.assertIn('id="launch-card"', html)
+        self.assertIn('id="launch-details"', html)
+        self.assertIn('Back to laboratories', html)
+        self.assertIn('Resource unavailable', html)
+
     def test_lab_without_image_does_not_render_broken_image(self):
         self._login_as_admin()
         self.app.config['INSTITUTION_LOGO'] = ''
