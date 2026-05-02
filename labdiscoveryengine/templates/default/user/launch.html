@@ -1,8 +1,50 @@
 {% extends "default/user/_base.html" %}
 
+{% block head %}
+{{ super() }}
+<style>
+    .launch-shell {
+        margin-top: -1.5rem;
+    }
+
+    #launch-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0 !important;
+        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08) !important;
+    }
+
+    #launch-title {
+        font-size: 1.55rem;
+        line-height: 1.25;
+    }
+
+    #launch-message {
+        color: #1f2937;
+        max-width: 70rem;
+    }
+
+    #launch-details {
+        background: #ffffff !important;
+        border-color: #cbd5e1 !important;
+        color: #111827;
+        white-space: pre-wrap;
+    }
+
+    @media (max-width: 767.98px) {
+        .launch-shell {
+            margin-top: -0.75rem;
+        }
+
+        #launch-card .card-body {
+            padding: 1.25rem !important;
+        }
+    }
+</style>
+{% endblock %}
+
 {% block container %}
-<div class="col">
-    <div id="launch-card" class="card border-0 shadow-sm">
+<div class="col launch-shell">
+    <div id="launch-card" class="card rounded-2">
         <div class="card-body p-4">
             <div class="d-flex align-items-start gap-3">
                 <div id="launch-spinner" class="spinner-border text-primary flex-shrink-0" role="status" aria-hidden="true"></div>
