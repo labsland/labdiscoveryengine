@@ -22,6 +22,13 @@ from labdiscoveryengine.scheduling.asyncio.mongodb import async_mongo
 # TODO: what to do when fail
 # TODO: check if the user has cancelled the reservation
 
+
+def _coerce_should_finish(value) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return -1.0
+
 class ResourceReservationProcessor:
     """
     A resource reservations processor takes a reservation and tries to process it.
@@ -35,6 +42,8 @@ class ResourceReservationProcessor:
         self.resource_keys = ResourceKeys(resource.identifier)
         self.reservation_keys = ReservationKeys(reservation_id)
         self.client = None
+        self.max_cleanup_finish_attempts = 60
+        self.max_cleanup_finish_sleep = 30
 
     def get_client(self) -> AbstractResourceClient:
         """
@@ -49,6 +58,17 @@ class ResourceReservationProcessor:
         # TODO: what to do? should we pass it to another resource, if available? How do we know which ones have already been tested?
         # TODO: BUT WATCHOUT: we don't want to deassign if the problem was 
         await self.deassign(reservation_request)
+        await aioredis_store.hset(self.reservation_keys.base(), ReservationKeys.parameters.status, ReservationKeys.states.broken)
+        await aioredis_store.publish(self.reservation_keys.channel(), ReservationKeys.states.broken)
+
+    async def fail_closed(self, reason: str):
+        """
+        Mark this reservation as broken without releasing the physical resource.
+
+        This is used after an uncertain cleanup. Releasing the resource here
+        could expose hardware that may still be restoring or running user code.
+        """
+        logger.error(f"[{self.resource.identifier}] Reservation {self.reservation_id} failed closed: {reason}")
         await aioredis_store.hset(self.reservation_keys.base(), ReservationKeys.parameters.status, ReservationKeys.states.broken)
         await aioredis_store.publish(self.reservation_keys.channel(), ReservationKeys.states.broken)
 
@@ -231,10 +251,19 @@ class ResourceReservationProcessor:
 
         if session_id is not None:
             # First, call the dispose method in the laboratory (as much as needed)
-            should_finish: float = await self.client.finish(session_id)
-            while should_finish > 0:
-                await asyncio.sleep(should_finish)
-                should_finish = await self.client.finish(session_id)
+            await aioredis_store.hset(self.reservation_keys.base(), ReservationKeys.parameters.status, ReservationKeys.states.finishing)
+            await aioredis_store.publish(self.reservation_keys.channel(), ReservationKeys.states.finishing)
+            should_finish: float = _coerce_should_finish(await self.client.finish(session_id))
+            cleanup_attempts = 0
+            while should_finish >= 0:
+                cleanup_attempts += 1
+                if cleanup_attempts > self.max_cleanup_finish_attempts:
+                    return await self.fail_closed(
+                        f"remote cleanup did not finish after {self.max_cleanup_finish_attempts} attempts"
+                    )
+                sleep_for = should_finish if should_finish > 0 else 1
+                await asyncio.sleep(min(float(sleep_for), self.max_cleanup_finish_sleep))
+                should_finish = _coerce_should_finish(await self.client.finish(session_id))
 
         # Then mark that we are indeed finished
         status = ReservationKeys.states.finished
