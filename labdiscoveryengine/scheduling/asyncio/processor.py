@@ -44,6 +44,8 @@ class ResourceReservationProcessor:
         self.client = None
         self.max_cleanup_finish_attempts = 60
         self.max_cleanup_finish_sleep = 30
+        self.status_poll_max_attempts = 3
+        self.status_poll_retry_delay = 1.0
 
     def get_client(self) -> AbstractResourceClient:
         """
@@ -213,7 +215,7 @@ class ResourceReservationProcessor:
         return status, session_id
 
     async def wait_for_reservation_being_over(self, session_id: str, max_time: float = 30) -> str:
-        should_finish: int = await self.client.get_should_finish(session_id)
+        should_finish: int = await self.get_should_finish_with_retry(session_id)
         # should_finish is either the time left or for next poll or -1 if it finished
         # if it is exactly zero, it might wait forever
 
@@ -239,6 +241,24 @@ class ResourceReservationProcessor:
                     return ReservationKeys.states.cancelling
         
         return ReservationKeys.states.ready
+
+    async def get_should_finish_with_retry(self, session_id: str) -> int:
+        for attempt in range(1, self.status_poll_max_attempts + 1):
+            try:
+                return await self.client.get_should_finish(session_id)
+            except aiohttp.client_exceptions.ClientError:
+                if attempt >= self.status_poll_max_attempts:
+                    raise
+
+                logger.warning(
+                    "[%s] Transient error polling session %s status; retrying (%s/%s)",
+                    self.resource.identifier,
+                    session_id,
+                    attempt,
+                    self.status_poll_max_attempts,
+                    exc_info=True,
+                )
+                await asyncio.sleep(self.status_poll_retry_delay)
     
     async def finish(self, reservation_request: Optional[ReservationRequest], session_id: Optional[str]):
         """

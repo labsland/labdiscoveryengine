@@ -2,9 +2,12 @@ import unittest
 from types import SimpleNamespace
 from unittest import mock
 
+import aiohttp.client_exceptions
+
 from labdiscoveryengine.data import Resource
 from labdiscoveryengine.scheduling.asyncio.client import WebLabLibResourceClient
 from labdiscoveryengine.scheduling.asyncio.healthcheck_worker import ResourceHealthchecksWorker
+from labdiscoveryengine.scheduling.asyncio.processor import ResourceReservationProcessor
 from labdiscoveryengine.scheduling.asyncio.redis import aioredis_store
 from labdiscoveryengine.scheduling.asyncio.resource_worker import ResourceWorker
 from labdiscoveryengine.scheduling.data import ReservationRequest, ResourceHealth
@@ -121,6 +124,57 @@ class WebLabLibResourceClientTestCase(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(body["client_initial_data"]["back"], "https://custom.example/back")
         self.assertEqual(body["client_initial_data"]["back_url"], "https://back.example")
         self.assertEqual(body["client_initial_data"]["backUrl"], "https://back.example")
+
+
+class ResourceReservationProcessorTestCase(unittest.IsolatedAsyncioTestCase):
+    def build_processor(self):
+        resource = Resource(
+            identifier="resource-1",
+            url="https://resource.example",
+            login="user",
+            password="pass",
+            features=[],
+            cameras=[],
+            healthchecks=[],
+            api="weblablib-v1.0",
+        )
+        processor = ResourceReservationProcessor(resource, "reservation-1")
+        processor.status_poll_retry_delay = 0
+        return processor
+
+    async def test_get_should_finish_retries_transient_disconnect(self):
+        processor = self.build_processor()
+        processor.client = SimpleNamespace(
+            get_should_finish=mock.AsyncMock(
+                side_effect=[
+                    aiohttp.client_exceptions.ServerDisconnectedError(),
+                    7,
+                ]
+            )
+        )
+
+        with mock.patch("labdiscoveryengine.scheduling.asyncio.processor.asyncio.sleep", new=mock.AsyncMock()) as sleep:
+            result = await processor.get_should_finish_with_retry("session-1")
+
+        self.assertEqual(result, 7)
+        self.assertEqual(processor.client.get_should_finish.await_count, 2)
+        sleep.assert_awaited_once_with(0)
+
+    async def test_get_should_finish_raises_after_retry_budget(self):
+        processor = self.build_processor()
+        processor.status_poll_max_attempts = 2
+        processor.client = SimpleNamespace(
+            get_should_finish=mock.AsyncMock(
+                side_effect=aiohttp.client_exceptions.ServerDisconnectedError()
+            )
+        )
+
+        with mock.patch("labdiscoveryengine.scheduling.asyncio.processor.asyncio.sleep", new=mock.AsyncMock()) as sleep:
+            with self.assertRaises(aiohttp.client_exceptions.ServerDisconnectedError):
+                await processor.get_should_finish_with_retry("session-1")
+
+        self.assertEqual(processor.client.get_should_finish.await_count, 2)
+        sleep.assert_awaited_once_with(0)
 
 
 class ReservationRequestTestCase(unittest.TestCase):
