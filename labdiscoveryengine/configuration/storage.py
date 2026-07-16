@@ -1,4 +1,5 @@
 import time
+import os
 import pathlib
 import secrets
 import datetime
@@ -90,6 +91,35 @@ def get_current_deployment_directory() -> pathlib.Path:
     return directory
 
 
+def _get_resource_credential(resource_identifier: str, resource_data: Dict,
+                             direct_key: str, environment_key: str,
+                             default_value: Optional[str]) -> Optional[str]:
+    direct_value = resource_data.get(direct_key)
+    environment_variable = resource_data.get(environment_key)
+
+    if direct_value and environment_variable:
+        raise InvalidConfigurationValueError(
+            f"Resource {resource_identifier} defines both '{direct_key}' and "
+            f"'{environment_key}'"
+        )
+
+    if environment_variable:
+        if not isinstance(environment_variable, str):
+            raise InvalidConfigurationValueError(
+                f"Resource {resource_identifier} has an invalid "
+                f"'{environment_key}' (must be str)"
+            )
+        value = os.environ.get(environment_variable)
+        if not value:
+            raise InvalidConfigurationValueError(
+                f"Resource {resource_identifier} references missing or empty "
+                f"environment variable '{environment_variable}'"
+            )
+        return value
+
+    return direct_value or default_value
+
+
 def get_latest_configuration(configuration: Optional[StoredConfiguration] = None) -> StoredConfiguration:
     """
     If a configuration is provided, it will modify it if the files have changed. 
@@ -147,8 +177,20 @@ def get_latest_configuration(configuration: Optional[StoredConfiguration] = None
             added_resources = []
             for resource_identifier, resource_data in configuration_values[ConfigurationFileNames.resources].items():
                 resource_url = resource_data.get('url')                
-                resource_login = resource_data.get('login') or get_config('DEFAULT_RESOURCE_LOGIN')
-                resource_password = resource_data.get('password') or get_config('DEFAULT_RESOURCE_PASSWORD')
+                resource_login = _get_resource_credential(
+                    resource_identifier,
+                    resource_data,
+                    'login',
+                    'login_env',
+                    get_config('DEFAULT_RESOURCE_LOGIN'),
+                )
+                resource_password = _get_resource_credential(
+                    resource_identifier,
+                    resource_data,
+                    'password',
+                    'password_env',
+                    get_config('DEFAULT_RESOURCE_PASSWORD'),
+                )
                 resource_features = resource_data.get('features') or []
                 resource_healthchecks: List[Healthcheck] = _parse_healthchecks_config(resource_data.get('healthchecks')) or []
                 resource_cameras: List[Camera] = _parse_cameras_config(resource_data.get('cameras')) or []
@@ -387,6 +429,9 @@ def create_deployment_folder(directory: pathlib.Path, force: bool = False):
             "  url: http://localhost:5000",
             "  login: lde # If always the same use DEFAULT_RESOURCE_LOGIN in credentials.yml",
             "  password: password # If always the same use DEFAULT_RESOURCE_PASSWORD in credentials.yml",
+            "  # Alternatively, keep credentials out of YAML by naming environment variables:",
+            "  # login_env: DUMMY_RESOURCE_LOGIN",
+            "  # password_env: DUMMY_RESOURCE_PASSWORD",
             "  features: [feature1, feature2] # So we can reserve with a particular feature",
             "dummy-2:",
             "  # Include the URL and credentials of the remote laboratory",

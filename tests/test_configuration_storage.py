@@ -1,7 +1,9 @@
 import datetime
+import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from flask import Flask
 
@@ -10,6 +12,67 @@ from labdiscoveryengine.configuration.storage import ConfigurationFileNames, get
 
 
 class ConfigurationStorageTestCase(unittest.TestCase):
+    def _write_environment_credential_configuration(self, deployment_dir):
+        (deployment_dir / "configuration.yml").write_text(
+            "DEFAULT_MAX_TIME: 180\n",
+            encoding="utf-8",
+        )
+        (deployment_dir / "resources.yml").write_text(
+            "\n".join(
+                [
+                    "resource-1:",
+                    "  url: http://example.invalid/lab",
+                    "  login_env: TEST_RESOURCE_LOGIN",
+                    "  password_env: TEST_RESOURCE_PASSWORD",
+                    "",
+                ]
+            ),
+            encoding="utf-8",
+        )
+        (deployment_dir / "laboratories.yml").write_text(
+            "lab-1:\n  resources: [resource-1]\n",
+            encoding="utf-8",
+        )
+        (deployment_dir / "credentials.yml").write_text(
+            "administrators: {}\nexternal: {}\n",
+            encoding="utf-8",
+        )
+
+    def test_get_latest_configuration_resolves_resource_credentials_from_environment(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            deployment_dir = Path(tmpdir)
+            self._write_environment_credential_configuration(deployment_dir)
+            app = Flask(__name__)
+            app.config["LABDISCOVERYENGINE_DIRECTORY"] = str(deployment_dir)
+
+            with mock.patch.dict(
+                os.environ,
+                {
+                    "TEST_RESOURCE_LOGIN": "environment-user",
+                    "TEST_RESOURCE_PASSWORD": "environment-pass",
+                },
+            ):
+                with app.app_context():
+                    config = get_latest_configuration()
+
+            self.assertEqual("environment-user", config.resources["resource-1"].login)
+            self.assertEqual("environment-pass", config.resources["resource-1"].password)
+
+    def test_get_latest_configuration_rejects_missing_resource_credential_environment(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            deployment_dir = Path(tmpdir)
+            self._write_environment_credential_configuration(deployment_dir)
+            app = Flask(__name__)
+            app.config["LABDISCOVERYENGINE_DIRECTORY"] = str(deployment_dir)
+
+            with mock.patch.dict(os.environ, {}, clear=True):
+                with app.app_context():
+                    with self.assertRaisesRegex(
+                        Exception,
+                        "TEST_RESOURCE_LOGIN",
+                    ):
+                        get_latest_configuration()
+
     def test_get_latest_configuration_uses_defaults_from_configuration_file(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             deployment_dir = Path(tmpdir)
