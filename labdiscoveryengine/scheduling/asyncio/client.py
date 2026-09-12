@@ -23,7 +23,9 @@ class AbstractResourceClient:
             self.base_url = self.base_url[:-1]
         self.resource_keys = ResourceKeys(resource.identifier)
         self.auth = aiohttp.BasicAuth(resource.login, resource.password)
-        self.client_session: Optional[aiohttp.ClientSession] = aiohttp.ClientSession(auth=self.auth)
+        self.client_session: Optional[aiohttp.ClientSession] = aiohttp.ClientSession(
+            auth=self.auth, connector=aiohttp.TCPConnector(keepalive_timeout=2)
+        )
 
     async def __aenter__(self):
         await self.client_session.__aenter__()
@@ -74,10 +76,17 @@ class AbstractResourceClient:
         """
         url = self._get_url(f"/sessions/{session_id}/status")
 
-        async with self.client_session.get(url) as response:
-            result: dict = await response.json()
-
-        return result.get('should_finish') or 0
+        # Polling is idempotent. A proxy may close an idle pooled connection
+        # just as it is reused; retry once without abandoning the reservation.
+        # Session creation and other mutations are deliberately not replayed.
+        for attempt in range(2):
+            try:
+                async with self.client_session.get(url) as response:
+                    result: dict = await response.json()
+                return result.get('should_finish') or 0
+            except aiohttp.ServerDisconnectedError:
+                if attempt:
+                    raise
     
     delete_on_finish = True
 
