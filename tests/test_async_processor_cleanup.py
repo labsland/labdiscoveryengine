@@ -55,6 +55,11 @@ class FakeAsyncRedis:
         self.published.append((channel, value))
         return 1
 
+    async def hsetnx(self, key, field, value):
+        if field in self.values.get(key, {}):
+            return 0
+        return await self.hset(key, field, value)
+
     async def delete(self, key):
         existed = key in self.values
         self.values.pop(key, None)
@@ -156,6 +161,18 @@ class AsyncProcessorCleanupTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(store.values[key]['reconciliation_required'], '1')
         self.assertEqual(store.values[key]['status'], 'broken')
         processor.client.start.assert_awaited_once()
+
+    async def test_stale_pending_cannot_repeat_an_attempted_start(self):
+        from unittest.mock import AsyncMock
+        store=FakeAsyncRedis();processor=build_processor()
+        store.values[processor.reservation_keys.base()]=dict(status='pending',start_attempted='1')
+        store.values[processor.resource_keys.assigned()]=processor.reservation_id
+        processor.client=type('Client',(),{'start':AsyncMock()})()
+        with patch.object(processor_module,'aioredis_store',store):
+            await processor.initialize_laboratory(None)
+        processor.client.start.assert_not_awaited()
+        self.assertEqual(store.values[processor.reservation_keys.base()]['status'],'broken')
+        self.assertEqual(store.values[processor.resource_keys.assigned()],processor.reservation_id)
 
     async def test_cancel_cannot_release_uncertain_start(self):
         store = FakeAsyncRedis(); processor = build_processor()

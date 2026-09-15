@@ -55,18 +55,21 @@ class ExternalTestCase(unittest.TestCase):
         add.return_value = ReservationStatus(status='queued', reservation_id='reservation-1', position=0)
         data = dict(laboratory='dummy', resources=['fpga-1'], userIdentifier='tester',
                     backUrl='https://example.invalid', requestId='request-1234567890123')
-        store.set.return_value = True
+        store.eval.return_value = 1
         response = self.client.post('/external/v1/reservations/', headers=self._auth_headers(), json=data)
         self.assertEqual(response.status_code, 200)
-        fingerprint = store.set.call_args.args[1]
-        store.set.return_value = False; store.get.return_value = fingerprint
+        store.eval.return_value = 0
         scripts.get_reservation_status.return_value = add.return_value
         response = self.client.post('/external/v1/reservations/', headers=self._auth_headers(), json=data)
         self.assertEqual(response.status_code, 200); add.assert_called_once()
         scripts.get_reservation_status.return_value = ReservationStatus(status=None, reservation_id='uncertain')
         response = self.client.post('/external/v1/reservations/', headers=self._auth_headers(), json=data)
         self.assertEqual(response.status_code, 409); add.assert_called_once()
-        store.get.return_value = 'other-payload'
+        store.eval.return_value = -1
+        response = self.client.post('/external/v1/reservations/', headers=self._auth_headers(), json=data)
+        self.assertEqual(response.status_code, 409); add.assert_called_once()
+
+        store.eval.return_value = -2
         response = self.client.post('/external/v1/reservations/', headers=self._auth_headers(), json=data)
         self.assertEqual(response.status_code, 409); add.assert_called_once()
 

@@ -122,11 +122,14 @@ class ReservationStatusLuaScriptTestCase(unittest.TestCase):
         store.hset(key,mapping={'status':'queued','metadata':json.dumps({'user_identifier':'owner'})})
         store.expire(key,1)
         store.sadd(key+':resources','resource-1'); store.expire(key+':resources',1)
+        claim_key='lde:external-request:'+processor.reservation_id
+        store.setex(claim_key,60,'fingerprint')
         store.zadd('lde:resources:resource-1:queues:priorities',{'normal':0})
         store.rpush('lde:resources:resource-1:queues:normal',processor.reservation_id)
         assign=store.register_script((ROOT/'labdiscoveryengine/lua/assign_reservation_to_resource.lua').read_text())
         self.assertEqual(assign(args=['resource-1']),processor.reservation_id)
         self.assertEqual(store.ttl(key),-1); self.assertEqual(store.ttl(key+':resources'),-1)
+        self.assertEqual(store.ttl(claim_key),-1)
         # Admission remains controllable after the independent user index expires.
         with patch.object(web_api,'redis_store',store):
             self.assertTrue(web_api._owns_reservation('owner',processor.reservation_id))
@@ -141,6 +144,7 @@ class ReservationStatusLuaScriptTestCase(unittest.TestCase):
         self.assertFalse(store.exists(processor.resource_keys.assigned()))
         self.assertGreater(store.ttl(key),3500)
         self.assertGreater(store.ttl(key+':resources'),3500)
+        self.assertGreater(store.ttl(claim_key),604700)
 
     def test_valid_request_is_exclusive_across_pool_resources(self):
         assign=self.redis.register_script((ROOT/'labdiscoveryengine/lua/assign_reservation_to_resource.lua').read_text())
@@ -157,3 +161,75 @@ class ReservationStatusLuaScriptTestCase(unittest.TestCase):
         self.redis.hset('lde:reservations:ready-1', mapping=dict(status='ready',resource='resource-2',url='https://lab.invalid'))
         result=self.script(args=['ready-1'])
         self.assertEqual(result[5], 'resource-2')
+
+    def test_atomic_replay_claim_excludes_competing_admissions_and_old_hashes(self):
+        from concurrent.futures import ThreadPoolExecutor
+        from unittest.mock import patch
+        from labdiscoveryengine.views import external
+        with patch.object(external,'redis_store',self.redis):
+            with ThreadPoolExecutor(max_workers=8) as workers:
+                outcomes=list(workers.map(lambda _: external.claim_external_request('race','fingerprint'),range(16)))
+            self.assertEqual(outcomes.count(1),1)
+            self.assertEqual(outcomes.count(0),15)
+            self.assertEqual(external.claim_external_request('race','different'),-1)
+            self.redis.hset('lde:reservations:old',mapping={'status':'broken','metadata':'old'})
+            self.assertEqual(external.claim_external_request('old','new'),-2)
+            self.assertEqual(self.redis.hget('lde:reservations:old','metadata'),'old')
+
+    def test_real_external_late_replay_does_not_reset_owned_state(self):
+        import asyncio
+        import json
+        from unittest.mock import patch
+        from tests.views.test_external import ExternalTestCase
+        from labdiscoveryengine.views import external
+        from labdiscoveryengine.scheduling.sync import web_api
+        from labdiscoveryengine.scheduling.asyncio import processor as pm
+        from labdiscoveryengine.utils import lde_config
+        from labdiscoveryengine.scheduling.data import ReservationRequest
+        store=self.redis
+        ExternalTestCase.setUpClass()
+        case=ExternalTestCase()
+        old_scripts=web_api.sync_lua_scripts._SCRIPT_INSTANCES.copy()
+        try:
+            with patch.object(external,'redis_store',store),patch.object(web_api,'redis_store',store),patch.object(web_api,'is_mongo_active',return_value=False):
+                web_api.sync_lua_scripts.initialize_web_lua_scripts()
+                body=dict(laboratory='dummy',resources=['fpga-1'],userIdentifier='tester',backUrl='https://offline.invalid',requestId='late-replay-123456789')
+                first=case.client.post('/external/v1/reservations/',json=body,headers=case._auth_headers())
+                self.assertEqual(first.status_code,200)
+                identifier=first.json['reservation_id'];key='lde:reservations:'+identifier
+                claim_key='lde:external-request:'+identifier
+                assign=store.register_script((ROOT/'labdiscoveryengine/lua/assign_reservation_to_resource.lua').read_text())
+                self.assertEqual(assign(args=['fpga-1']),identifier)
+                self.assertEqual(store.ttl(claim_key),-1)
+                store.hset(key,mapping=dict(status='ready',session_id='original-session',resource='fpga-1',url='https://offline.invalid',start_attempted='1'))
+                # Simulate an old deployment's expired seven-day replay key.
+                store.pexpire(claim_key,1);time.sleep(.02)
+                for payload,expected in ((body,200),(dict(body,userIdentifier='different'),409)):
+                    result=case.client.post('/external/v1/reservations/',json=payload,headers=case._auth_headers())
+                    self.assertEqual(result.status_code,expected)
+                    self.assertEqual(store.hget(key,'status'),'ready')
+                    self.assertEqual(store.ttl(key),-1)
+                # Defense in depth even if some other caller bypasses HTTP claim.
+                with self.assertRaises(redis.ResponseError):
+                    web_api.sync_lua_scripts.store_reservation(ReservationRequest.fromdict(json.loads(store.hget(key,'metadata'))))
+                class Adapter:
+                    def __getattr__(self,name):
+                        async def method(*a,**k): return getattr(store,name)(*a,**k)
+                        return method
+                class Lab:
+                    starts=0
+                    finished=[]
+                    async def __aenter__(self): return self
+                    async def __aexit__(self,*a): pass
+                    async def start(self,request): self.starts+=1; raise AssertionError('Second start')
+                    async def get_should_finish(self,session): return -1
+                    async def finish(self,session): self.finished.append(session);return -1
+                processor=pm.ResourceReservationProcessor(lde_config.resources['fpga-1'],identifier);lab=Lab()
+                with patch.object(pm,'aioredis_store',Adapter()),patch.object(pm,'is_mongo_active',return_value=False),patch.object(processor,'get_client',return_value=lab):
+                    asyncio.run(processor.process())
+                self.assertEqual(lab.starts,0)
+                self.assertEqual(lab.finished,['original-session'])
+                self.assertFalse(store.exists('lde:resources:fpga-1:assigned'))
+        finally:
+            web_api.sync_lua_scripts._SCRIPT_INSTANCES=old_scripts
+            ExternalTestCase.tearDownClass()

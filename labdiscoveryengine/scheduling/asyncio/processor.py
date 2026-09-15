@@ -80,6 +80,7 @@ class ResourceReservationProcessor:
         await aioredis_store.hset(self.reservation_keys.base(), 'reconciliation_required', '1')
         await aioredis_store.hset(self.reservation_keys.base(), ReservationKeys.parameters.status, ReservationKeys.states.broken)
         await aioredis_store.persist(self.reservation_keys.base())
+        await aioredis_store.persist('lde:external-request:' + self.reservation_id)
         await aioredis_store.publish(self.reservation_keys.channel(), ReservationKeys.states.broken)
 
     async def did_user_cancel(self) -> bool:
@@ -188,12 +189,15 @@ class ResourceReservationProcessor:
 
         Return the new status
         """
+        # Claim before any external start. A stale/replayed pending state must
+        # never restart a session whose outcome was already attempted.
+        if not await aioredis_store.hsetnx(self.reservation_keys.base(), 'start_attempted', '1'):
+            return await self.fail_closed('Laboratory start was already attempted')
         # First, let's report that we are initializing
         status = ReservationKeys.states.initializing
 
         initialization_pipeline = aioredis_store.pipeline()
         initialization_pipeline.hset(self.reservation_keys.base(), ReservationKeys.parameters.status, ReservationKeys.states.initializing)
-        initialization_pipeline.hset(self.reservation_keys.base(), 'start_attempted', '1')
         # Notify potential clients
         initialization_pipeline.publish(self.reservation_keys.channel(), status)
         await initialization_pipeline.execute()
@@ -349,7 +353,9 @@ class ResourceReservationProcessor:
         await aioredis_store.eval(
             "if redis.call('get', KEYS[1]) == ARGV[1] then "
             "redis.call('expire', KEYS[2], 3600); redis.call('expire', KEYS[3], 3600); "
+            "redis.call('expire', KEYS[4], 604800); "
             "return redis.call('del', KEYS[1]) end return 0",
-            3, self.resource_keys.assigned(), self.reservation_keys.base(),
-            self.reservation_keys.base() + ':resources', self.reservation_id)
+            4, self.resource_keys.assigned(), self.reservation_keys.base(),
+            self.reservation_keys.base() + ':resources',
+            'lde:external-request:' + self.reservation_id, self.reservation_id)
         logger.info(f"[{self.resource.identifier}] Reservation {self.reservation_id} deassigned")

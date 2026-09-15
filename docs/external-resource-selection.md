@@ -28,8 +28,15 @@ Optional POST `requestId` (16–128 URL-safe alphanumeric/underscore/hyphen char
 provides idempotent external admission. IDs are scoped to the external account and
 bound to the complete JSON payload. Matching repeats return the same reservation
 status, conflicting parameters return 409. A claim with uncertain admission also
-returns 409 and must be reconciled, not retried using a new ID. Retention is seven
-days; clients must not reuse expired IDs. Requests without `requestId` retain their
+returns 409 and must be reconciled, not retried using a new ID. Unassigned claims
+are retained seven days; ownership/quarantine makes the claim persistent, and
+verified release starts a new seven-day retention window. Clients must not reuse
+expired IDs. The atomic claim also checks retained reservation state: even if an
+older guard expired, existing state is never overwritten. Matching retained
+fingerprints recover status; old state without a fingerprint returns 409 for
+reconciliation. The storage script independently rejects duplicate IDs, and a
+start-attempt marker prevents a stale pending state from initializing again.
+Requests without `requestId` retain their
 existing behavior. Failed authentication/admission validation occurs before claim.
 
 ## Ownership and rollout

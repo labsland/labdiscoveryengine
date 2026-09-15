@@ -20,6 +20,11 @@ local resources = {} -- onwards
 
 local reservation_key = "lde:reservations:" .. reservation_id
 
+-- Defense in depth: no caller may reset an existing owner/session to pending.
+if redis.call('exists', reservation_key) == 1 then
+    return redis.error_reply('Reservation already exists')
+end
+
 for i = 6, #ARGV do
     table.insert(resources, ARGV[i])
 end
@@ -28,6 +33,10 @@ end
 redis.call("hset", reservation_key, "status", "pending")
 redis.call("hset", reservation_key, "laboratory", laboratory)
 redis.call("hset", reservation_key, "metadata", reservation_metadata)
+local fingerprint = redis.call('get', 'lde:external-request:' .. reservation_id)
+if fingerprint then
+    redis.call('hset', reservation_key, 'external_request_fingerprint', fingerprint)
+end
 redis.call("expire", reservation_key, 3600)
 
 -- Store the reservation_id in the user reservation_ids

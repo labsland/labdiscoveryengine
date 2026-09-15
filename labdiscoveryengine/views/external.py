@@ -16,6 +16,30 @@ from labdiscoveryengine.scheduling.sync.web_api import add_reservation, cancel_r
 external_v1_blueprint = Blueprint('external', __name__)
 
 
+def claim_external_request(identifier, fingerprint):
+    """Claim once, including after an older replay key expires beside an owner.
+
+    An existing reservation is never admission scratch space. A retained hash
+    without a matching fingerprint (including old deployments) needs manual
+    reconciliation, not overwrite. Claim and existence check must be atomic.
+    """
+    return redis_store.eval("""
+        local existing = redis.call('get', KEYS[1])
+        if existing then
+            if existing == ARGV[1] then return 0 else return -1 end
+        end
+        if redis.call('exists', KEYS[2]) == 1 then
+            if redis.call('hget', KEYS[2], 'external_request_fingerprint') == ARGV[1] then
+                return 0
+            end
+            return -2
+        end
+        redis.call('set', KEYS[1], ARGV[1], 'EX', 604800)
+        return 1
+    """, 2, 'lde:external-request:' + identifier,
+        ReservationKeys(identifier).base(), fingerprint)
+
+
 @external_v1_blueprint.after_request
 def private_external_response(response):
     response.headers['Cache-Control'] = 'no-store'
@@ -137,13 +161,15 @@ def reservations():
             if not isinstance(request_id, str) or not re.fullmatch(r'[A-Za-z0-9_-]{16,128}', request_id):
                 return jsonify(success=False, message='Invalid requestId'), 400
             identifier = hashlib.sha256((g.external_username + ':' + request_id).encode()).hexdigest()
-            key = 'lde:external-request:' + identifier
             fingerprint = hashlib.sha256(json.dumps(request_data, sort_keys=True).encode()).hexdigest()
             # Claim before invoking admission. An interrupted claim must NEVER
             # repeat admission: status may exist even if the HTTP response was lost.
-            if not redis_store.set(key, fingerprint, nx=True, ex=604800):
-                if redis_store.get(key) != fingerprint:
+            claim = claim_external_request(identifier, fingerprint)
+            if claim != 1:
+                if claim == -1:
                     return jsonify(success=False, message='requestId was used for different parameters'), 409
+                if claim == -2:
+                    return jsonify(success=False, message='Retained reservation needs reconciliation'), 409
                 status = sync_lua_scripts.get_reservation_status(identifier)
                 if not status.status:
                     return jsonify(success=False, message='Request outcome is uncertain; reconciliation required'), 409

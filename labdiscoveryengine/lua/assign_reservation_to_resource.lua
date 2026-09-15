@@ -46,6 +46,7 @@ for _, priority in ipairs(priorities) do
                 -- one-hour queue deadline must not expire an owned session.
                 redis.call("persist", key)
                 redis.call("persist", key .. ":resources")
+                redis.call("persist", "lde:external-request:" .. reservation_id)
             end
         end
         if assigned ~= 0 then -- It was previously assigned in another queue
