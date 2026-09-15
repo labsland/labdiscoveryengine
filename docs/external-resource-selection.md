@@ -40,6 +40,23 @@ Lost start responses, interrupted initialization, missing metadata and uncertain
 cleanup keep ownership and mark `reconciliation_required`. Restart and cancellation
 do not release an unknown session. Malformed cleanup responses are not success.
 
+Unassigned queue requests retain the existing one-hour expiry. Allocation skips
+expired/terminal entries without recreating their hashes; it atomically makes an
+assigned request's metadata/resource set persistent. The external account can
+still poll/cancel its request from retained metadata after the legacy user-index
+TTL expires. Verified release reinstates one-hour retention for terminal records;
+quarantines remain persistent until explicit reconciliation. Missing cleanup state
+is never interpreted as "already finished".
+
+Cleanup accepts successful HTTP with an explicit finite numeric `should_finish`,
+or the supported LDL/WebLabLib `{"message":"Deleted"}` acknowledgement. Positive
+values require more waiting; negative values acknowledge completion. HTTP errors,
+error flags, malformed data, `Not found` and `Unknown op` are uncertain, not
+completion. This validates the library's acknowledgement, not the physical quality
+of a lab's own disposal hook. Hardware restoration must still be qualified for
+each lab. Legacy servers reporting only `Not found` need review; do not bypass
+quarantine merely to preserve their old apparent availability.
+
 Upgrade web and workers coherently after draining existing requests. Do not mix
 older schedulers that ignore retained owners with the new quarantine behavior.
 Persist/backup scheduler Redis: total data loss cannot be reconciled automatically

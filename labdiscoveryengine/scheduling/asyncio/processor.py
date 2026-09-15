@@ -79,6 +79,7 @@ class ResourceReservationProcessor:
             1, self.resource_keys.assigned(), self.reservation_id)
         await aioredis_store.hset(self.reservation_keys.base(), 'reconciliation_required', '1')
         await aioredis_store.hset(self.reservation_keys.base(), ReservationKeys.parameters.status, ReservationKeys.states.broken)
+        await aioredis_store.persist(self.reservation_keys.base())
         await aioredis_store.publish(self.reservation_keys.channel(), ReservationKeys.states.broken)
 
     async def did_user_cancel(self) -> bool:
@@ -281,9 +282,11 @@ class ResourceReservationProcessor:
         if (await aioredis_store.hget(self.reservation_keys.base(), 'reconciliation_required')
                 or (session_id is None and await aioredis_store.hget(self.reservation_keys.base(), 'start_attempted'))):
             return await self.fail_closed('Cannot confirm cleanup of an uncertain session')
-        if status not in (ReservationKeys.states.initializing, ReservationKeys.states.ready, ReservationKeys.states.finishing, ReservationKeys.states.cancelling):
+        if status == ReservationKeys.states.finished:
             logger.info(f"[{self.resource.identifier}] Reservation {self.reservation_id} was already finished")
             return await self.deassign(reservation_request)
+        if status not in (ReservationKeys.states.initializing, ReservationKeys.states.ready, ReservationKeys.states.finishing, ReservationKeys.states.cancelling):
+            return await self.fail_closed('Missing or unexpected cleanup state')
 
         if session_id is not None:
             # First, call the dispose method in the laboratory (as much as needed)
@@ -344,6 +347,9 @@ class ResourceReservationProcessor:
         """
         # A delayed old processor must never release a newer owner's resource.
         await aioredis_store.eval(
-            "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) end return 0",
-            1, self.resource_keys.assigned(), self.reservation_id)
+            "if redis.call('get', KEYS[1]) == ARGV[1] then "
+            "redis.call('expire', KEYS[2], 3600); redis.call('expire', KEYS[3], 3600); "
+            "return redis.call('del', KEYS[1]) end return 0",
+            3, self.resource_keys.assigned(), self.reservation_keys.base(),
+            self.reservation_keys.base() + ':resources', self.reservation_id)
         logger.info(f"[{self.resource.identifier}] Reservation {self.reservation_id} deassigned")

@@ -60,7 +60,11 @@ class FakeAsyncRedis:
         self.values.pop(key, None)
         return 1 if existed else 0
 
-    async def eval(self, script, count, key, owner):
+    async def persist(self, key):
+        return int(key in self.values)
+
+    async def eval(self, script, count, *args):
+        key, owner = args[0], args[count]
         value = self.values.get(key)
         if value == owner or value == {'reservation_id': owner}:
             if "'persist'" in script:
@@ -105,6 +109,16 @@ def build_processor():
 
 
 class AsyncProcessorCleanupTest(unittest.IsolatedAsyncioTestCase):
+    async def test_missing_owned_metadata_never_releases_without_cleanup(self):
+        store=FakeAsyncRedis(); processor=build_processor()
+        processor.client=FakeClient([-1])
+        owner=processor.resource_keys.assigned(); store.values[owner]=processor.reservation_id
+        with patch.object(processor_module,'aioredis_store',store):
+            await processor.finish(None,'known-session')
+        self.assertIn(owner,store.values)
+        self.assertEqual(processor.client.finish_calls,[])
+        self.assertEqual(store.values[processor.reservation_keys.base()]['status'],'broken')
+
     async def test_restart_cancellation_uses_known_session(self):
         import json
         from unittest.mock import AsyncMock

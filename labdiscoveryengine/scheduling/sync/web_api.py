@@ -205,12 +205,23 @@ def _store_terminal_reservation(reservation_request: ReservationRequest, status:
     pipeline.publish(reservation_keys.channel(), status)
     pipeline.execute()
 
+def _owns_reservation(username: str, reservation_id: str) -> bool:
+    # The legacy per-user index can expire independently of a long-lived owned
+    # session. Retained server-written metadata is the authoritative fallback.
+    if redis_store.sismember(UserKeys(username).reservations(), reservation_id):
+        return True
+    try:
+        metadata = json.loads(redis_store.hget(ReservationKeys(reservation_id).base(), ReservationKeys.parameters.metadata) or '{}')
+        return isinstance(metadata, dict) and metadata.get('user_identifier') == username
+    except (TypeError, ValueError):
+        return False
+
+
 def get_reservation_status(username: str, reservation_id: str, previous_reservation_status: Optional[ReservationStatus] = None, max_time: float = 20) -> Optional[ReservationStatus]:
     """
     Get the reservation status. If previous_reservation_status is provided, wait until it is different, waiting at maximum of max_time seconds.
     """
-    reservation_identifiers = redis_store.smembers(UserKeys(username).reservations())
-    if reservation_id not in reservation_identifiers:
+    if not _owns_reservation(username, reservation_id):
         return None
 
     t0 = time.time()
@@ -236,8 +247,7 @@ def cancel_reservation(user_identifier: str, reservation_id: str) -> bool:
     """
     Cancel a reservation.
     """
-    reservation_identifiers = redis_store.smembers(UserKeys(user_identifier).reservations())
-    if reservation_id not in reservation_identifiers:
+    if not _owns_reservation(user_identifier, reservation_id):
         return False
 
     reservation_key = ReservationKeys(reservation_id).base()

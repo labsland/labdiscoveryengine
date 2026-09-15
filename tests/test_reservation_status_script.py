@@ -27,6 +27,7 @@ class ReservationStatusLuaScriptTestCase(unittest.TestCase):
         cls.process = subprocess.Popen(
             [
                 REDIS_SERVER,
+                '--bind', '127.0.0.1',
                 "--port",
                 str(cls.port),
                 "--save",
@@ -97,8 +98,60 @@ class ReservationStatusLuaScriptTestCase(unittest.TestCase):
         assign = self.redis.register_script((ROOT / 'labdiscoveryengine/lua/assign_reservation_to_resource.lua').read_text())
         self.redis.zadd('lde:resources:resource-1:queues:priorities', {'normal': 0})
         self.redis.rpush('lde:resources:resource-1:queues:normal', 'request-1')
+        self.redis.hset('lde:reservations:request-1',mapping={'status':'pending','metadata':'{}'})
         self.assertEqual(assign(args=['resource-1']), 'request-1')
         self.assertEqual(self.redis.ttl('lde:resources:resource-1:assigned'), -1)
+
+    def test_expired_and_terminal_queue_entries_are_skipped_without_ghost_hashes(self):
+        assign=self.redis.register_script((ROOT/'labdiscoveryengine/lua/assign_reservation_to_resource.lua').read_text())
+        self.redis.zadd('lde:resources:resource-1:queues:priorities', {'normal':0})
+        self.redis.rpush('lde:resources:resource-1:queues:normal','expired','finished','valid')
+        self.redis.hset('lde:reservations:finished',mapping={'status':'finished','metadata':'{}'})
+        self.redis.hset('lde:reservations:valid',mapping={'status':'pending','metadata':'{}'})
+        self.assertEqual(assign(args=['resource-1']),'valid')
+        self.assertFalse(self.redis.exists('lde:reservations:expired'))
+        self.assertFalse(self.redis.hexists('lde:reservations:finished',':assigned'))
+
+    def test_claim_persists_metadata_and_cleanup_reinstates_retention(self):
+        import asyncio
+        import json
+        from unittest.mock import patch
+        from tests.test_async_processor_cleanup import build_processor, processor_module
+        from labdiscoveryengine.scheduling.sync import web_api
+        store=self.redis; processor=build_processor(); key=processor.reservation_keys.base()
+        store.hset(key,mapping={'status':'queued','metadata':json.dumps({'user_identifier':'owner'})})
+        store.expire(key,1)
+        store.sadd(key+':resources','resource-1'); store.expire(key+':resources',1)
+        store.zadd('lde:resources:resource-1:queues:priorities',{'normal':0})
+        store.rpush('lde:resources:resource-1:queues:normal',processor.reservation_id)
+        assign=store.register_script((ROOT/'labdiscoveryengine/lua/assign_reservation_to_resource.lua').read_text())
+        self.assertEqual(assign(args=['resource-1']),processor.reservation_id)
+        self.assertEqual(store.ttl(key),-1); self.assertEqual(store.ttl(key+':resources'),-1)
+        # Admission remains controllable after the independent user index expires.
+        with patch.object(web_api,'redis_store',store):
+            self.assertTrue(web_api._owns_reservation('owner',processor.reservation_id))
+            self.assertFalse(web_api._owns_reservation('other',processor.reservation_id))
+            self.assertFalse(web_api.cancel_reservation('other',processor.reservation_id))
+            self.assertTrue(web_api.cancel_reservation('owner',processor.reservation_id))
+        self.assertEqual(store.hget(key,'status'),'cancelling')
+        class Adapter:
+            async def eval(self,*args): return store.eval(*args)
+        with patch.object(processor_module,'aioredis_store',Adapter()):
+            asyncio.run(processor.deassign(None))
+        self.assertFalse(store.exists(processor.resource_keys.assigned()))
+        self.assertGreater(store.ttl(key),3500)
+        self.assertGreater(store.ttl(key+':resources'),3500)
+
+    def test_valid_request_is_exclusive_across_pool_resources(self):
+        assign=self.redis.register_script((ROOT/'labdiscoveryengine/lua/assign_reservation_to_resource.lua').read_text())
+        key='lde:reservations:pooled'
+        self.redis.hset(key,mapping={'status':'pending','metadata':'{}'})
+        for resource in ('a','b'):
+            self.redis.zadd('lde:resources:'+resource+':queues:priorities',{'normal':0})
+            self.redis.rpush('lde:resources:'+resource+':queues:normal','pooled')
+        self.assertEqual(assign(args=['a']),'pooled')
+        self.assertFalse(assign(args=['b']))
+        self.assertFalse(self.redis.exists('lde:resources:b:assigned'))
 
     def test_status_reports_actual_assignment_not_candidate(self):
         self.redis.hset('lde:reservations:ready-1', mapping=dict(status='ready',resource='resource-2',url='https://lab.invalid'))

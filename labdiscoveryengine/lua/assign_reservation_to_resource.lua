@@ -34,13 +34,24 @@ for _, priority in ipairs(priorities) do
             break
         end
 
-        -- hsetnx will return 0 if it already existed
-        assigned = redis.call("hsetnx", "lde:reservations:" .. reservation_id, ":assigned", 1)
+        local key = "lde:reservations:" .. reservation_id
+        local status = redis.call("hget", key, "status")
+        local metadata = redis.call("hget", key, "metadata")
+        -- Shared queues can outlive individual requests. Never recreate an
+        -- expired hash or claim hardware for a terminal/unowned stale entry.
+        if metadata and (status == "pending" or status == "queued" or status == "cancelling") then
+            assigned = redis.call("hsetnx", key, ":assigned", 1)
+            if assigned ~= 0 then
+                -- Claim and retention are one atomic operation. The existing
+                -- one-hour queue deadline must not expire an owned session.
+                redis.call("persist", key)
+                redis.call("persist", key .. ":resources")
+            end
+        end
         if assigned ~= 0 then -- It was previously assigned in another queue
             -- but if it did not exist, it means that no other resource was assigned to this reservation and we will use this one
             break
         end
-        -- TODO: maybe check other constraints, such as is the reservations still valid, etc.
     end
 
     if assigned ~= 0 then

@@ -119,7 +119,7 @@ class SchedulingHealthTestCase(unittest.TestCase):
         self.assertEqual(["robot-1"], stored_request.resources)
 
     def test_cancel_reservation_does_not_move_terminal_reservation_to_cancelling(self):
-        with mock.patch("labdiscoveryengine.scheduling.sync.web_api.redis_store.smembers", return_value={"reservation-1"}, create=True), \
+        with mock.patch("labdiscoveryengine.scheduling.sync.web_api.redis_store.sismember", return_value=True, create=True), \
                 mock.patch("labdiscoveryengine.scheduling.sync.web_api.redis_store.hget", return_value=ReservationKeys.states.broken, create=True), \
                 mock.patch("labdiscoveryengine.scheduling.sync.web_api.redis_store.pipeline", create=True) as pipeline:
             result = cancel_reservation("user-1", "reservation-1")
@@ -128,7 +128,7 @@ class SchedulingHealthTestCase(unittest.TestCase):
         pipeline.assert_not_called()
 
     def test_cancel_reservation_removes_stale_user_entry(self):
-        with mock.patch("labdiscoveryengine.scheduling.sync.web_api.redis_store.smembers", return_value={"reservation-1"}, create=True), \
+        with mock.patch("labdiscoveryengine.scheduling.sync.web_api.redis_store.sismember", return_value=True, create=True), \
                 mock.patch("labdiscoveryengine.scheduling.sync.web_api.redis_store.hget", return_value=None, create=True), \
                 mock.patch("labdiscoveryengine.scheduling.sync.web_api.redis_store.srem", create=True) as srem:
             result = cancel_reservation("user-1", "reservation-1")

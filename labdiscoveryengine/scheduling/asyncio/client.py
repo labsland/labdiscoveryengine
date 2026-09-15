@@ -1,5 +1,6 @@
 import abc
 import datetime
+import math
 import aiohttp
 from typing import Optional, Tuple
 
@@ -101,15 +102,28 @@ class AbstractResourceClient:
 
         if self.delete_on_finish:
             async with self.client_session.delete(url) as response:
+                response.raise_for_status()
                 result: dict = await response.json()
         else:
             body = {
                 "action": "delete"
             }
             async with self.client_session.post(url, json=body) as response:
+                response.raise_for_status()
                 result: dict = await response.json()
 
-        return result.get('should_finish', -1)
+        if not isinstance(result, dict) or result.get('error') or result.get('success') is False or result.get('error_code'):
+            raise ValueError('Laboratory rejected cleanup')
+        if 'should_finish' in result:
+            value = result['should_finish']
+            if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+                raise ValueError('Invalid cleanup completion value')
+            return value
+        # Both supported libraries explicitly return Deleted after waiting for
+        # disposal. Not found / Unknown op / arbitrary JSON are not completion.
+        if result.get('message') == 'Deleted':
+            return -1
+        raise ValueError('Laboratory cleanup completion is unconfirmed')
         
 class LabDiscoveryLibResourceClient(AbstractResourceClient):
     """
