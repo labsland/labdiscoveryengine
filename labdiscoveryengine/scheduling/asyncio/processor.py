@@ -3,6 +3,7 @@ import datetime
 import json
 import logging
 import time
+import math
 from typing import Optional, Tuple
 
 import aiohttp.web
@@ -24,10 +25,10 @@ from labdiscoveryengine.scheduling.asyncio.mongodb import async_mongo
 
 
 def _coerce_should_finish(value) -> float:
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return -1.0
+    result = float(value)
+    if not math.isfinite(result) or isinstance(value, bool):
+        raise ValueError('Invalid cleanup response')
+    return result
 
 class ResourceReservationProcessor:
     """
@@ -71,6 +72,12 @@ class ResourceReservationProcessor:
         could expose hardware that may still be restoring or running user code.
         """
         logger.error(f"[{self.resource.identifier}] Reservation {self.reservation_id} failed closed: {reason}")
+        # Also preserve an ownership marker created by an older worker that
+        # still used an expiry. Never extend another reservation's marker.
+        await aioredis_store.eval(
+            "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('persist', KEYS[1]) end return 0",
+            1, self.resource_keys.assigned(), self.reservation_id)
+        await aioredis_store.hset(self.reservation_keys.base(), 'reconciliation_required', '1')
         await aioredis_store.hset(self.reservation_keys.base(), ReservationKeys.parameters.status, ReservationKeys.states.broken)
         await aioredis_store.publish(self.reservation_keys.channel(), ReservationKeys.states.broken)
 
@@ -117,7 +124,7 @@ class ResourceReservationProcessor:
 
             if status is None or metadata_str is None:
                 logger.error(f"[{self.resource.identifier}] Error: reservation {self.reservation_id} not found")
-                return await self.fail()
+                return await self.fail_closed("Missing reservation metadata; ownership needs reconciliation")
 
             metadata = json.loads(metadata_str)
 
@@ -125,13 +132,18 @@ class ResourceReservationProcessor:
 
             self.client: AbstractResourceClient = self.get_client()
 
-            session_id: str = None
+            session_id = await aioredis_store.hget(self.reservation_keys.base(), ReservationKeys.parameters.session_id)
 
             async with self.client:
+                # A restart during POST /start cannot prove whether the lab started.
+                # Retain the assignment; never repeat start or dispose an unknown session.
+                if (status in (ReservationKeys.states.initializing, ReservationKeys.states.broken)
+                        or await aioredis_store.hget(self.reservation_keys.base(), 'reconciliation_required')):
+                    return await self.fail_closed("Uncertain initialization or previous quarantine")
                 # Go state by state, in order, and finish it when needed
 
                 if await self.did_user_cancel():
-                    return await self.cancelled(reservation_request=reservation_request, session_id=None)
+                    return await self.cancelled(reservation_request=reservation_request, session_id=session_id)
 
                 # If it is queued, then go ahead and initialize it
                 if status in (ReservationKeys.states.pending, ReservationKeys.states.queued):
@@ -167,7 +179,7 @@ class ResourceReservationProcessor:
                 await self.finish(reservation_request, session_id)
         except (aiohttp.web.HTTPException, aiohttp.client_exceptions.ClientError) as err:
             logger.error(f"[{self.resource.identifier}] Error: failed to process reservation {self.reservation_id}: {err}", exc_info=True)
-            return await self.fail()
+            return await self.fail_closed("Transport failure while processing the laboratory")
 
     async def initialize_laboratory(self, reservation_request: ReservationRequest) -> Optional[Tuple[str, str]]:
         """
@@ -180,6 +192,7 @@ class ResourceReservationProcessor:
 
         initialization_pipeline = aioredis_store.pipeline()
         initialization_pipeline.hset(self.reservation_keys.base(), ReservationKeys.parameters.status, ReservationKeys.states.initializing)
+        initialization_pipeline.hset(self.reservation_keys.base(), 'start_attempted', '1')
         # Notify potential clients
         initialization_pipeline.publish(self.reservation_keys.channel(), status)
         await initialization_pipeline.execute()
@@ -188,7 +201,7 @@ class ResourceReservationProcessor:
             url, session_id = await self.client.start(reservation_request)
         except Exception as err:
             logger.error(f"[{self.resource.identifier}] Error: failed to start reservation {self.reservation_id}: {err}", exc_info=True)
-            return await self.fail()
+            return await self.fail_closed("Laboratory start outcome is uncertain")
 
         logger.info(f"[{self.resource.identifier}] Successfully started reservation {self.reservation_id}: url {url} and session id {session_id}")
 
@@ -265,6 +278,9 @@ class ResourceReservationProcessor:
         Call the dispose method on the laboratory server and finish
         """
         status: Optional[str] = await aioredis_store.hget(self.reservation_keys.base(), ReservationKeys.parameters.status)
+        if (await aioredis_store.hget(self.reservation_keys.base(), 'reconciliation_required')
+                or (session_id is None and await aioredis_store.hget(self.reservation_keys.base(), 'start_attempted'))):
+            return await self.fail_closed('Cannot confirm cleanup of an uncertain session')
         if status not in (ReservationKeys.states.initializing, ReservationKeys.states.ready, ReservationKeys.states.finishing, ReservationKeys.states.cancelling):
             logger.info(f"[{self.resource.identifier}] Reservation {self.reservation_id} was already finished")
             return await self.deassign(reservation_request)
@@ -273,7 +289,10 @@ class ResourceReservationProcessor:
             # First, call the dispose method in the laboratory (as much as needed)
             await aioredis_store.hset(self.reservation_keys.base(), ReservationKeys.parameters.status, ReservationKeys.states.finishing)
             await aioredis_store.publish(self.reservation_keys.channel(), ReservationKeys.states.finishing)
-            should_finish: float = _coerce_should_finish(await self.client.finish(session_id))
+            try:
+                should_finish = _coerce_should_finish(await self.client.finish(session_id))
+            except Exception:
+                return await self.fail_closed('Invalid or lost cleanup response')
             cleanup_attempts = 0
             while should_finish >= 0:
                 cleanup_attempts += 1
@@ -283,7 +302,10 @@ class ResourceReservationProcessor:
                     )
                 sleep_for = should_finish if should_finish > 0 else 1
                 await asyncio.sleep(min(float(sleep_for), self.max_cleanup_finish_sleep))
-                should_finish = _coerce_should_finish(await self.client.finish(session_id))
+                try:
+                    should_finish = _coerce_should_finish(await self.client.finish(session_id))
+                except Exception:
+                    return await self.fail_closed('Invalid or lost cleanup response')
 
         # Then mark that we are indeed finished
         status = ReservationKeys.states.finished
@@ -320,5 +342,8 @@ class ResourceReservationProcessor:
         At resource level, make sure that the laboratory does not have this
         reservation identifier assigned anymore
         """
-        await aioredis_store.delete(self.resource_keys.assigned())
+        # A delayed old processor must never release a newer owner's resource.
+        await aioredis_store.eval(
+            "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) end return 0",
+            1, self.resource_keys.assigned(), self.reservation_id)
         logger.info(f"[{self.resource.identifier}] Reservation {self.reservation_id} deassigned")

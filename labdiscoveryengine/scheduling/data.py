@@ -92,6 +92,9 @@ class ReservationStatus(NamedTuple):
     url: Optional[str] = None
     message: Optional[str] = None
 
+    # Canonical scheduler identity, not a client-requested label.
+    assigned_resource: Optional[str] = None
+
     def has_changed_from(self, previous_status: 'ReservationStatus') -> bool:
         # We only care of this two really
         return self.status != previous_status.status or self.position != previous_status.position
@@ -112,6 +115,9 @@ class ReservationStatus(NamedTuple):
         if self.message:
             result['message'] = self.message
 
+        if self.assigned_resource:
+            result['assigned_resource'] = self.assigned_resource
+
         return result
     
     @staticmethod
@@ -123,6 +129,7 @@ class ReservationStatus(NamedTuple):
             position=data.get('position'),
             url=data.get('url'),
             message=data.get('message'),
+            assigned_resource=data.get('assigned_resource'),
         )
 
 class ResourceHealth(NamedTuple):

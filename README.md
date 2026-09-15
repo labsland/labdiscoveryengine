@@ -1,5 +1,8 @@
 # LabDiscoveryEngine
 
+See [external resource selection](docs/external-resource-selection.md) for scoped
+discovery, actual assignment reporting, idempotent admission and ownership safety.
+
 
 [![CircleCI](https://circleci.com/gh/labsland/labdiscoveryengine.svg?style=svg)](https://circleci.com/gh/labsland/labdiscoveryengine)
 [![Supported Versions](https://img.shields.io/pypi/pyversions/labdiscoveryengine.svg)](https://pypi.org/project/labdiscoveryengine)

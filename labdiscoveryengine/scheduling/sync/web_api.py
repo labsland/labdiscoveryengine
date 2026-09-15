@@ -74,8 +74,8 @@ class SyncLuaScripts:
         Get the reservation status in an adequate class
         """
         result = self._run_lua_script(ScriptNames.get_reservation_status, args=[reservation_id])
-        status, external_session_id, position, url, message = result
-        return ReservationStatus(status=status, reservation_id=reservation_id, external_session_id=external_session_id, position=position, url=url, message=message)
+        status, external_session_id, position, url, message, assigned_resource = result
+        return ReservationStatus(status=status, reservation_id=reservation_id, external_session_id=external_session_id, position=position, url=url, message=message, assigned_resource=assigned_resource)
 
 sync_lua_scripts = SyncLuaScripts()
 

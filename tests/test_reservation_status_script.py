@@ -75,10 +75,32 @@ class ReservationStatusLuaScriptTestCase(unittest.TestCase):
         self.redis.sadd(f"{reservation_key}:resources", "boolean-s1i3")
         self.redis.zadd("lde:resources:boolean-s1i3:queues:priorities", {"normal": 0})
 
-        status, external_session_id, position, url, message = self.script(args=[reservation_id])
+        status, external_session_id, position, url, message, assigned_resource = self.script(args=[reservation_id])
 
         self.assertEqual("pending", status)
         self.assertFalse(external_session_id)
         self.assertFalse(position)
         self.assertFalse(url)
         self.assertFalse(message)
+        self.assertFalse(assigned_resource)
+
+    def test_quarantined_owner_blocks_next_allocation(self):
+        assign = self.redis.register_script((ROOT / 'labdiscoveryengine/lua/assign_reservation_to_resource.lua').read_text())
+        self.redis.set('lde:resources:resource-1:assigned', 'old-owner')
+        self.redis.zadd('lde:resources:resource-1:queues:priorities', {'normal': 0})
+        self.redis.rpush('lde:resources:resource-1:queues:normal', 'next-request')
+        self.assertFalse(assign(args=['resource-1']))
+        self.assertEqual(self.redis.lrange('lde:resources:resource-1:queues:normal', 0, -1), ['next-request'])
+        self.assertEqual(self.redis.get('lde:resources:resource-1:assigned'), 'old-owner')
+
+    def test_new_assignment_does_not_expire_into_reallocation(self):
+        assign = self.redis.register_script((ROOT / 'labdiscoveryengine/lua/assign_reservation_to_resource.lua').read_text())
+        self.redis.zadd('lde:resources:resource-1:queues:priorities', {'normal': 0})
+        self.redis.rpush('lde:resources:resource-1:queues:normal', 'request-1')
+        self.assertEqual(assign(args=['resource-1']), 'request-1')
+        self.assertEqual(self.redis.ttl('lde:resources:resource-1:assigned'), -1)
+
+    def test_status_reports_actual_assignment_not_candidate(self):
+        self.redis.hset('lde:reservations:ready-1', mapping=dict(status='ready',resource='resource-2',url='https://lab.invalid'))
+        result=self.script(args=['ready-1'])
+        self.assertEqual(result[5], 'resource-2')

@@ -32,6 +32,44 @@ class ExternalTestCase(unittest.TestCase):
         token = base64.b64encode(b"labsland:password").decode("ascii")
         return {"Authorization": f"Basic {token}"}
 
+    @patch('labdiscoveryengine.views.external.discover_resources')
+    def test_discovery_requires_auth_and_scope(self, discover):
+        self.assertEqual(self.client.get('/external/v1/laboratories/dummy/resources').status_code, 401)
+        response = self.client.get('/external/v1/laboratories/secret/resources', headers=self._auth_headers())
+        self.assertEqual(response.status_code, 404)
+        discover.assert_not_called()
+
+    @patch('labdiscoveryengine.views.external.discover_resources')
+    def test_discovery_is_private_read_only(self, discover):
+        discover.return_value = dict(version=1, resources=[dict(id='fpga-1', state='unknown')])
+        with patch('labdiscoveryengine.views.external.add_reservation') as add:
+            response = self.client.get('/external/v1/laboratories/dummy/resources', headers=self._auth_headers())
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers['Cache-Control'], 'no-store')
+        add.assert_not_called()
+
+    @patch('labdiscoveryengine.views.external.redis_store')
+    @patch('labdiscoveryengine.views.external.sync_lua_scripts')
+    @patch('labdiscoveryengine.views.external.add_reservation')
+    def test_idempotent_post_does_not_admit_twice(self, add, scripts, store):
+        add.return_value = ReservationStatus(status='queued', reservation_id='reservation-1', position=0)
+        data = dict(laboratory='dummy', resources=['fpga-1'], userIdentifier='tester',
+                    backUrl='https://example.invalid', requestId='request-1234567890123')
+        store.set.return_value = True
+        response = self.client.post('/external/v1/reservations/', headers=self._auth_headers(), json=data)
+        self.assertEqual(response.status_code, 200)
+        fingerprint = store.set.call_args.args[1]
+        store.set.return_value = False; store.get.return_value = fingerprint
+        scripts.get_reservation_status.return_value = add.return_value
+        response = self.client.post('/external/v1/reservations/', headers=self._auth_headers(), json=data)
+        self.assertEqual(response.status_code, 200); add.assert_called_once()
+        scripts.get_reservation_status.return_value = ReservationStatus(status=None, reservation_id='uncertain')
+        response = self.client.post('/external/v1/reservations/', headers=self._auth_headers(), json=data)
+        self.assertEqual(response.status_code, 409); add.assert_called_once()
+        store.get.return_value = 'other-payload'
+        response = self.client.post('/external/v1/reservations/', headers=self._auth_headers(), json=data)
+        self.assertEqual(response.status_code, 409); add.assert_called_once()
+
     @patch("labdiscoveryengine.views.external.add_reservation")
     def test_create_reservation_rejects_unknown_resource(self, add_reservation):
         response = self.client.post(

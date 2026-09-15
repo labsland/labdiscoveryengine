@@ -3,6 +3,15 @@ import sys
 import types
 from unittest.mock import patch
 
+# Prefer installed dependencies. Stubs are only for minimal test environments;
+# installing them unconditionally poisons later HTTP/client regression modules.
+try:
+    import motor.motor_asyncio
+    import aiohttp.web
+    import aiohttp.client_exceptions
+except ImportError:
+    pass
+
 motor_module = types.ModuleType("motor")
 motor_asyncio_module = types.ModuleType("motor.motor_asyncio")
 motor_asyncio_module.AsyncIOMotorClient = object
@@ -51,6 +60,24 @@ class FakeAsyncRedis:
         self.values.pop(key, None)
         return 1 if existed else 0
 
+    async def eval(self, script, count, key, owner):
+        value = self.values.get(key)
+        if value == owner or value == {'reservation_id': owner}:
+            if "'persist'" in script:
+                return 1
+            return await self.delete(key)
+        return 0
+
+    def pipeline(self):
+        store = self
+        class Pipeline:
+            def __init__(self): self.calls = []
+            def hset(self, *args): self.calls.append(('hset', args)); return self
+            def publish(self, *args): self.calls.append(('publish', args)); return self
+            async def execute(self):
+                return [await getattr(store, method)(*args) for method, args in self.calls]
+        return Pipeline()
+
 
 class FakeClient:
     def __init__(self, finish_values):
@@ -78,8 +105,69 @@ def build_processor():
 
 
 class AsyncProcessorCleanupTest(unittest.IsolatedAsyncioTestCase):
+    async def test_restart_cancellation_uses_known_session(self):
+        import json
+        from unittest.mock import AsyncMock
+        from tests.test_scheduling_health import _reservation_request
+        store=FakeAsyncRedis(); processor=build_processor()
+        key=ReservationKeys(processor.reservation_id).base()
+        store.values[key]=dict(status='cancelling',session_id='existing-session',
+                               start_attempted='1',metadata=json.dumps(_reservation_request(['resource-1']).todict()))
+        client=AsyncMock()
+        with patch.object(processor_module,'aioredis_store',store), \
+             patch.object(processor_module,'is_mongo_active',return_value=False), \
+             patch.object(processor,'get_client',return_value=client), \
+             patch.object(processor,'cancelled',new_callable=AsyncMock) as cancelled:
+            await processor.process()
+        self.assertEqual(cancelled.call_args.kwargs['session_id'],'existing-session')
+
+    async def test_old_processor_cannot_release_another_owner(self):
+        store=FakeAsyncRedis(); processor=build_processor()
+        owner=ResourceKeys(processor.resource.identifier).assigned()
+        store.values[owner]='new-reservation'
+        with patch.object(processor_module,'aioredis_store',store),patch.object(processor_module,'is_mongo_active',return_value=False):
+            await processor.deassign(None)
+        self.assertEqual(store.values[owner],'new-reservation')
+
+    async def test_lost_start_response_retains_assignment_and_never_repeats(self):
+        store = FakeAsyncRedis(); processor = build_processor()
+        from unittest.mock import AsyncMock
+        processor.client = type('Client', (), {'start': AsyncMock(side_effect=TimeoutError('lost response'))})()
+        owner = ResourceKeys(processor.resource.identifier).assigned()
+        key = ReservationKeys(processor.reservation_id).base()
+        store.values[owner] = 'reservation-1'
+        with patch.object(processor_module, 'aioredis_store', store):
+            await processor.initialize_laboratory(None)
+        self.assertIn(owner, store.values)
+        self.assertEqual(store.values[key]['reconciliation_required'], '1')
+        self.assertEqual(store.values[key]['status'], 'broken')
+        processor.client.start.assert_awaited_once()
+
+    async def test_cancel_cannot_release_uncertain_start(self):
+        store = FakeAsyncRedis(); processor = build_processor()
+        owner = ResourceKeys(processor.resource.identifier).assigned()
+        key = ReservationKeys(processor.reservation_id).base()
+        store.values[owner] = 'reservation-1'
+        store.values[key] = dict(status='cancelling', start_attempted='1')
+        with patch.object(processor_module, 'aioredis_store', store):
+            await processor.finish(None, None)
+        self.assertIn(owner, store.values)
+        self.assertEqual(store.values[key]['status'], 'broken')
+
+    async def test_malformed_cleanup_retains_assignment(self):
+        store = FakeAsyncRedis(); processor = build_processor()
+        processor.client = FakeClient(['bad'])
+        owner = ResourceKeys(processor.resource.identifier).assigned()
+        key = ReservationKeys(processor.reservation_id).base()
+        store.values[owner] = 'reservation-1'; store.values[key] = dict(status='ready')
+        with patch.object(processor_module, 'aioredis_store', store):
+            await processor.finish(None, 'session-1')
+        self.assertIn(owner, store.values)
+        self.assertEqual(store.values[key]['status'], 'broken')
+
     async def test_cleanup_should_finish_coercion_handles_bad_values(self):
-        self.assertEqual(processor_module._coerce_should_finish("bad"), -1.0)
+        with self.assertRaises(ValueError):
+            processor_module._coerce_should_finish("bad")
 
     async def test_finish_waits_until_remote_cleanup_is_done(self):
         store = FakeAsyncRedis()

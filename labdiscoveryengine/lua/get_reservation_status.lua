@@ -70,4 +70,5 @@ elseif status == "ready" or status == "cancelling" or status == "finishing" then
 end
 
 
-return { status or false, external_session_id or false, position or false, url or false, message or false }
+local assigned_resource = redis.call("hget", reservation_key, "resource")
+return { status or false, external_session_id or false, position or false, url or false, message or false, assigned_resource or false }

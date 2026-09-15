@@ -12,6 +12,13 @@
 
 local resource = ARGV[1]
 
+-- Ownership survives uncertain startup/cleanup and worker restart. Never pop
+-- another queue while this physical resource is assigned, even if its previous
+-- reservation is marked broken. Only verified cleanup may release the marker.
+if redis.call("exists", "lde:resources:" .. resource .. ":assigned") == 1 then
+    return false
+end
+
 local reservation_id = false
 
 local priorities = redis.call("zrange", "lde:resources:" .. resource .. ":queues:priorities", 0, -1)
@@ -43,7 +50,7 @@ for _, priority in ipairs(priorities) do
 end
 
 if reservation_id ~= false then
-    redis.call("setex", "lde:resources:" .. resource .. ":assigned", 3600, reservation_id)
+    redis.call("set", "lde:resources:" .. resource .. ":assigned", reservation_id)
 end
 
 return reservation_id

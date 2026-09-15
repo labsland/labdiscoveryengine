@@ -1,13 +1,34 @@
 import secrets
+import hashlib
+import json
+import re
 from typing import List, Optional
 from flask import Blueprint, jsonify, g, request
 
 from labdiscoveryengine.utils import lde_config
 
 from labdiscoveryengine.scheduling.data import ReservationRequest, ReservationStatus
+from labdiscoveryengine.scheduling.sync.discovery import discover_resources
+from labdiscoveryengine.scheduling.sync.web_api import redis_store, sync_lua_scripts
+from labdiscoveryengine.scheduling.keys import ReservationKeys
 from labdiscoveryengine.scheduling.sync.web_api import add_reservation, cancel_reservation, get_reservation_status
 
 external_v1_blueprint = Blueprint('external', __name__)
+
+
+@external_v1_blueprint.after_request
+def private_external_response(response):
+    response.headers['Cache-Control'] = 'no-store'
+    return response
+
+
+@external_v1_blueprint.route('/laboratories/<laboratory>/resources')
+def laboratory_resources(laboratory):
+    # Check scope before lookup: do not disclose unauthorized laboratory names.
+    if (laboratory not in lde_config.external_users[g.external_username].laboratories
+            or laboratory not in lde_config.laboratories):
+        return jsonify(success=False, message='Laboratory not available'), 404
+    return jsonify(success=True, **discover_resources(laboratory))
 
 @external_v1_blueprint.before_request
 def before_request():
@@ -110,8 +131,26 @@ def reservations():
         if client_initial_data is not None and not isinstance(client_initial_data, dict):
             return jsonify(success=False, code='invalid-request', message='Invalid clientInitialData (must be object)'), 400
 
+        identifier = secrets.token_urlsafe()
+        request_id = request_data.get('requestId')
+        if request_id is not None:
+            if not isinstance(request_id, str) or not re.fullmatch(r'[A-Za-z0-9_-]{16,128}', request_id):
+                return jsonify(success=False, message='Invalid requestId'), 400
+            identifier = hashlib.sha256((g.external_username + ':' + request_id).encode()).hexdigest()
+            key = 'lde:external-request:' + identifier
+            fingerprint = hashlib.sha256(json.dumps(request_data, sort_keys=True).encode()).hexdigest()
+            # Claim before invoking admission. An interrupted claim must NEVER
+            # repeat admission: status may exist even if the HTTP response was lost.
+            if not redis_store.set(key, fingerprint, nx=True, ex=604800):
+                if redis_store.get(key) != fingerprint:
+                    return jsonify(success=False, message='requestId was used for different parameters'), 409
+                status = sync_lua_scripts.get_reservation_status(identifier)
+                if not status.status:
+                    return jsonify(success=False, message='Request outcome is uncertain; reconciliation required'), 409
+                return jsonify(success=True, **status.todict())
+
         reservation_request = ReservationRequest(
-            identifier=secrets.token_urlsafe(),
+            identifier=identifier,
             group=None,
             laboratory=laboratory,
             resources=resources,
