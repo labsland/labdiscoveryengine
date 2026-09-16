@@ -5,7 +5,7 @@ import logging
 from typing import Optional
 import aiohttp
 
-from labdiscoveryengine.data import Resource, RobotcheckerHealthcheck
+from labdiscoveryengine.data import Resource, RobotcheckerHealthcheck, JsonSuccessHealthcheck
 from labdiscoveryengine.scheduling.data import ResourceHealth
 from labdiscoveryengine.scheduling.asyncio.redis import aioredis_store
 from labdiscoveryengine.scheduling.keys import ResourceKeys
@@ -73,7 +73,7 @@ class ResourceHealthchecksWorker:
         robotchecker_healthchecks = [
             healthcheck
             for healthcheck in self.resource.healthchecks
-            if isinstance(healthcheck, RobotcheckerHealthcheck)
+            if isinstance(healthcheck, (RobotcheckerHealthcheck, JsonSuccessHealthcheck))
         ]
 
         if not robotchecker_healthchecks:
@@ -81,8 +81,13 @@ class ResourceHealthchecksWorker:
             return
 
         states = []
+        source = ('configured-checks' if any(isinstance(check, JsonSuccessHealthcheck)
+                  for check in robotchecker_healthchecks) else 'robotchecker')
         for healthcheck in robotchecker_healthchecks:
-            states.append(await self._run_robotchecker_healthcheck(healthcheck))
+            if isinstance(healthcheck, JsonSuccessHealthcheck):
+                states.append(await self._run_json_success_healthcheck(healthcheck))
+            else:
+                states.append(await self._run_robotchecker_healthcheck(healthcheck))
 
         broken_states = [state for state in states if state.status == ResourceHealth.states.broken]
         if broken_states:
@@ -90,15 +95,32 @@ class ResourceHealthchecksWorker:
                 state.message or "checker reported the resource as broken"
                 for state in broken_states
             )
-            await self.mark_as_broken(message, source="robotchecker")
+            await self.mark_as_broken(message, source=source)
             return
 
         if any(state.status == ResourceHealth.states.healthy for state in states):
-            await self.mark_as_fixed(source="robotchecker")
+            await self.mark_as_fixed(source=source)
             return
 
         messages = [state.message for state in states if state.message]
-        await self.mark_as_unknown("; ".join(messages) or None, source="robotchecker")
+        await self.mark_as_unknown("; ".join(messages) or None, source=source)
+
+    async def _run_json_success_healthcheck(self, healthcheck):
+        # Explicit opt-in: do not reinterpret existing generic HTTP camera/debug
+        # links as scheduler gates. Only passive JSON status endpoints belong here.
+        healthy = False
+        try:
+            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=healthcheck.timeout)) as session:
+                async with session.get(healthcheck.url, allow_redirects=False) as response:
+                    if response.status == 200:
+                        payload = await response.json()
+                        healthy = isinstance(payload, dict) and payload.get('success') is True
+        except Exception:
+            pass
+        return ResourceHealth(resource=self.resource_name,
+            status=ResourceHealth.states.healthy if healthy else ResourceHealth.states.broken,
+            message=None if healthy else f'{healthcheck.identifier}: success was not confirmed',
+            source='json-success')
 
     async def _run_robotchecker_healthcheck(self, healthcheck: RobotcheckerHealthcheck) -> ResourceHealth:
         timeout = aiohttp.ClientTimeout(total=healthcheck.timeout)

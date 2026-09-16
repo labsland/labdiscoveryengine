@@ -15,7 +15,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 from labdiscoveryengine.configuration.exc import ConfigurationDirectoryNotFoundError, ConfigurationFileNotFoundError, InvalidConfigurationFoundError, InvalidConfigurationValueError, InvalidLaboratoryConfigurationError, InvalidUsernameConfigurationError
 
-from ..data import Administrator, Camera, ExternalUser, Healthcheck, HttpHealthcheck, ImageCamera, Laboratory, Resource, RobotcheckerHealthcheck
+from ..data import Administrator, Camera, ExternalUser, Healthcheck, HttpHealthcheck, ImageCamera, Laboratory, Resource, RobotcheckerHealthcheck, JsonSuccessHealthcheck
 
 
 # Define a custom representer for OrderedDict
@@ -345,6 +345,8 @@ def _parse_healthchecks_config(config: Optional[dict]) -> List[Healthcheck]:
 
         if healthcheck_type == 'robotchecker':
             result.append(RobotcheckerHealthcheck(identifier=healthcheck_identifier, url=healthcheck_url, timeout=timeout))
+        elif healthcheck_type == 'json-success':
+            result.append(JsonSuccessHealthcheck(identifier=healthcheck_identifier, url=healthcheck_url, timeout=timeout))
         else:
             result.append(HttpHealthcheck(identifier=healthcheck_identifier, url=healthcheck_url, timeout=timeout))
 

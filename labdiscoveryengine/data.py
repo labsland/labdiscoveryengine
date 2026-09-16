@@ -61,6 +61,10 @@ class RobotcheckerHealthcheck(HttpHealthcheck):
     """
     pass
 
+class JsonSuccessHealthcheck(HttpHealthcheck):
+    """Opt-in passive endpoint requiring HTTP 200 and JSON success=true."""
+    pass
+
 class Camera:
     """
     A camera is a webcam that is connected to the laboratory.

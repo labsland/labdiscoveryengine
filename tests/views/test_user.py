@@ -18,6 +18,18 @@ class UserTestCase(unittest.TestCase):
     def test_login(self):
         self.client.get('/login')
 
+    def test_protected_lab_refuses_native_admin_without_private_context(self):
+        from labdiscoveryengine.utils import lde_config
+        self._login_as_admin()
+        with mock.patch.dict(lde_config.variables,
+                REQUIRED_SERVER_INITIAL_DATA_KEYS={'dummy': ['example.authorization']}), \
+                mock.patch('labdiscoveryengine.scheduling.sync.web_api.sync_lua_scripts.store_reservation') as store:
+            response = self.client.post('/user/api/reservations/', json={
+                'laboratory': 'dummy', 'group': 'All laboratories', 'resources': ['fpga-1'],
+                'serverInitialData': {'example.authorization': 'FORGED'}})
+        self.assertEqual(response.status_code, 403)
+        store.assert_not_called()
+
     def _login_as_admin(self):
         with self.client.session_transaction() as session:
             session['username'] = 'admin'

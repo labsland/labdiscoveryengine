@@ -184,7 +184,12 @@ def create_reservation():
         client_initial_data=_back_client_initial_data(back_url),
     )
 
-    reservation_status: ReservationStatus = add_reservation(reservation_request=reservation_request)
+    # A native browser cannot manufacture a provider's private server context.
+    from labdiscoveryengine.scheduling.trusted_data import TrustedDataError
+    try:
+        reservation_status: ReservationStatus = add_reservation(reservation_request=reservation_request)
+    except TrustedDataError:
+        return jsonify(success=False, message='This laboratory requires external authorization'), 403
 
     response_data = reservation_status.todict()
     response_data.setdefault('message', 'Reservation added')

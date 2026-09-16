@@ -11,6 +11,7 @@ from labdiscoveryengine.scheduling.data import ReservationRequest, ReservationSt
 from labdiscoveryengine.scheduling.sync.discovery import discover_resources
 from labdiscoveryengine.scheduling.sync.web_api import redis_store, sync_lua_scripts
 from labdiscoveryengine.scheduling.keys import ReservationKeys
+from labdiscoveryengine.scheduling.trusted_data import validate_server_data, TrustedDataError
 from labdiscoveryengine.scheduling.sync.web_api import add_reservation, cancel_reservation, get_reservation_status
 
 external_v1_blueprint = Blueprint('external', __name__)
@@ -94,7 +95,9 @@ def reservations():
     }
     """
     if request.method == 'POST':
-        request_data = request.get_json(force=True, silent=True) or {}
+        request_data = request.get_json(force=True, silent=True)
+        if not isinstance(request_data, dict):
+            return jsonify(success=False, message='Expected a JSON object'), 400
         laboratory: Optional[str] = request_data.get('laboratory')
         if not laboratory:
             return jsonify(success=False, code='invalid-request', message='Missing laboratory'), 400
@@ -155,6 +158,12 @@ def reservations():
         if client_initial_data is not None and not isinstance(client_initial_data, dict):
             return jsonify(success=False, code='invalid-request', message='Invalid clientInitialData (must be object)'), 400
 
+        try:
+            server_initial_data = validate_server_data(request_data.get('serverInitialData'),
+                g.external_username, laboratory, resources)
+        except TrustedDataError as error:
+            return jsonify(success=False, code='invalid-server-data', message=str(error)), 400
+
         identifier = secrets.token_urlsafe()
         request_id = request_data.get('requestId')
         if request_id is not None:
@@ -189,6 +198,7 @@ def reservations():
             max_time=max_time,
             locale=locale,
             client_initial_data=client_initial_data,
+            server_initial_data=server_initial_data or None,
         )
 
         reservation_status: ReservationStatus = add_reservation(reservation_request=reservation_request)

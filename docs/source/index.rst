@@ -18,6 +18,7 @@ User's guide
    quickstart
    configuration
    redis_durability
+   trusted_server_data
    installation_next_steps
    license
 

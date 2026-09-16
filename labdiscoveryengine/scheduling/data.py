@@ -31,6 +31,8 @@ class ReservationRequest(NamedTuple):
 
     # Optional WebLab-style client initial data for the underlying session
     client_initial_data: Optional[Dict[str, Any]] = None
+    # Private authenticated external context; never exposed in ReservationStatus.
+    server_initial_data: Optional[Dict[str, Any]] = None
 
     @property
     def unique_username(self):
@@ -53,6 +55,7 @@ class ReservationRequest(NamedTuple):
             'external_user_identifier': self.external_user_identifier,
             'back_url': self.back_url,
             'client_initial_data': self.client_initial_data,
+            'server_initial_data': self.server_initial_data,
         }
     
     @staticmethod
@@ -80,6 +83,8 @@ class ReservationRequest(NamedTuple):
 
         if data.get('client_initial_data') is not None:
             kwargs['client_initial_data'] = data['client_initial_data']
+        if data.get('server_initial_data') is not None:
+            kwargs['server_initial_data'] = data['server_initial_data']
 
         return ReservationRequest(**kwargs)
     

@@ -14,6 +14,7 @@ from labdiscoveryengine.scheduling.keys import ReservationKeys, ResourceKeys, Us
 from labdiscoveryengine import mongo
 
 from ..data import ReservationRequest, ReservationStatus, ResourceHealth
+from ..trusted_data import validate_request
 from ..redis_scripts import ScriptNames, SCRIPT_FILES
 
 from labdiscoveryengine.utils import is_mongo_active, lde_config
@@ -104,6 +105,7 @@ def initialize_web(app: Flask):
     
 
 def add_reservation(reservation_request: ReservationRequest) -> ReservationStatus:
+    validate_request(reservation_request, config=lde_config)
     candidate_resources = list(reservation_request.resources)
     if reservation_request.features:
         feature_filtered_resources = []

@@ -32,6 +32,29 @@ class ExternalTestCase(unittest.TestCase):
         token = base64.b64encode(b"labsland:password").decode("ascii")
         return {"Authorization": f"Basic {token}"}
 
+    @patch('labdiscoveryengine.views.external.add_reservation')
+    def test_server_data_rejected_by_default_before_admission(self, add):
+        response = self.client.post('/external/v1/reservations/', headers=self._auth_headers(), json=dict(
+            laboratory='dummy', resources=['fpga-1'], userIdentifier='tester', backUrl='https://example.invalid',
+            serverInitialData={'example.authorization': 'PRIVATE-TEST-TOKEN'}))
+        self.assertEqual(response.status_code, 400)
+        self.assertNotIn('PRIVATE-TEST-TOKEN', response.get_data(as_text=True))
+        add.assert_not_called()
+
+    @patch('labdiscoveryengine.views.external.add_reservation')
+    def test_authorized_server_data_stored_but_not_echoed(self, add):
+        from labdiscoveryengine.utils import lde_config
+        original_resource = lde_config.resources['fpga-1']
+        with patch.dict(lde_config.variables, {'EXTERNAL_SERVER_INITIAL_DATA_KEYS': {'labsland': {'dummy': ['example.authorization']}}}), \
+                patch.dict(lde_config.resources, {'fpga-1': original_resource._replace(api='weblablib-v1.0')}):
+            add.return_value = ReservationStatus(status='queued', reservation_id='reservation-1', position=0)
+            response = self.client.post('/external/v1/reservations/', headers=self._auth_headers(), json=dict(
+                laboratory='dummy', resources=['fpga-1'], userIdentifier='tester', backUrl='https://example.invalid',
+                serverInitialData={'example.authorization': 'PRIVATE-TEST-TOKEN'}))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(add.call_args.kwargs['reservation_request'].server_initial_data, {'example.authorization': 'PRIVATE-TEST-TOKEN'})
+        self.assertNotIn('PRIVATE-TEST-TOKEN', response.get_data(as_text=True))
+
     @patch('labdiscoveryengine.views.external.discover_resources')
     def test_discovery_requires_auth_and_scope(self, discover):
         self.assertEqual(self.client.get('/external/v1/laboratories/dummy/resources').status_code, 401)

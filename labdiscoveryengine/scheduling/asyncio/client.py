@@ -59,13 +59,16 @@ class AbstractResourceClient:
         """
         url = self._get_url("/sessions/")
 
+        from labdiscoveryengine.scheduling.trusted_data import validate_request
+        validate_request(reservation_request, self.resource, config=lde_config)
         body = self._get_start_body(reservation_request)
 
         async with self.client_session.post(url, json=body) as response:
             result: dict = await response.json()
         
         if result.get('error') or result.get('success', True) == False:
-            raise Exception(f"Error starting reservation {reservation_request.identifier}: {result}")
+            # A laboratory may echo private context in its error. Never log it.
+            raise Exception('Laboratory rejected session initialization')
         
         url = result.get('url')
         ldl_session_id = result.get('session_id')
@@ -179,6 +182,8 @@ class WebLabLibResourceClient(AbstractResourceClient):
         client_initial_data.setdefault('back', reservation_request.back_url)
         client_initial_data.setdefault('back_url', reservation_request.back_url)
         client_initial_data.setdefault('backUrl', reservation_request.back_url)
+        from labdiscoveryengine.scheduling.trusted_data import validate_request
+        server_initial_data = validate_request(reservation_request, self.resource, config=lde_config)
         return {
             'client_initial_data': client_initial_data,
             'server_initial_data': {
@@ -195,6 +200,7 @@ class WebLabLibResourceClient(AbstractResourceClient):
                 'priority.queue.slot.start': now.isoformat(),
                 'priority.queue.slot.start.utc': now.isoformat(),
                 'priority.queue.slot.start.timestamp': now.timestamp(),
+                **server_initial_data,
             },
             'back': reservation_request.back_url,
         }
