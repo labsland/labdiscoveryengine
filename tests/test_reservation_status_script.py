@@ -87,6 +87,56 @@ class ReservationStatusLuaScriptTestCase(unittest.TestCase):
         self.assertFalse(message)
         self.assertFalse(assigned_resource)
 
+    def test_unassigned_cancel_finishes_without_releasing_another_owner(self):
+        from labdiscoveryengine.scheduling.sync.web_api import _CANCEL_RESERVATION_SCRIPT
+        key = 'lde:reservations:waiting'
+        self.redis.hset(key, mapping={'status':'queued', 'metadata':'{}'})
+        self.redis.sadd(key+':resources', 'resource-1')
+        self.redis.set('lde:resources:resource-1:assigned', 'active-owner')
+        self.assertEqual(self.redis.eval(_CANCEL_RESERVATION_SCRIPT, 1, key, 'waiting'), 1)
+        self.assertEqual(self.redis.hget(key, 'status'), 'finished')
+        self.assertEqual(self.redis.get('lde:resources:resource-1:assigned'), 'active-owner')
+
+    def test_cancel_after_assignment_preserves_owner_and_requests_cleanup(self):
+        from labdiscoveryengine.scheduling.sync.web_api import _CANCEL_RESERVATION_SCRIPT
+        key='lde:reservations:owned'
+        self.redis.hset(key,mapping={'status':'pending', ':assigned':'1'})
+        self.redis.sadd(key+':resources','resource-1')
+        self.redis.set('lde:resources:resource-1:assigned','owned')
+        self.redis.eval(_CANCEL_RESERVATION_SCRIPT,1,key,'owned')
+        self.assertEqual(self.redis.hget(key,'status'),'cancelling')
+        self.assertEqual(self.redis.get('lde:resources:resource-1:assigned'),'owned')
+
+    def test_uncertain_or_missing_ownership_evidence_never_fast_finishes(self):
+        from labdiscoveryengine.scheduling.sync.web_api import _CANCEL_RESERVATION_SCRIPT
+        for extra, resource_set, resource_owner in [({'start_attempted':'1'},True,False),({'session_id':'unknown'},True,False),({},False,False),({},True,True)]:
+            self.redis.flushdb();key='lde:reservations:uncertain'
+            self.redis.hset(key,mapping=dict(status='pending',**extra))
+            if resource_set:self.redis.sadd(key+':resources','resource-1')
+            if resource_owner:self.redis.set('lde:resources:resource-1:assigned','uncertain')
+            self.redis.eval(_CANCEL_RESERVATION_SCRIPT,1,key,'uncertain')
+            self.assertEqual(self.redis.hget(key,'status'),'cancelling')
+
+    def test_cancel_cannot_revive_terminal_state_or_create_missing_hash(self):
+        from labdiscoveryengine.scheduling.sync.web_api import _CANCEL_RESERVATION_SCRIPT
+        for state in ('finished','broken','unavailable'):
+            key='lde:reservations:'+state;self.redis.hset(key,'status',state)
+            self.redis.eval(_CANCEL_RESERVATION_SCRIPT,1,key,state)
+            self.assertEqual(self.redis.hget(key,'status'),state)
+        self.assertEqual(self.redis.eval(_CANCEL_RESERVATION_SCRIPT,1,'lde:reservations:missing','missing'),0)
+        self.assertFalse(self.redis.exists('lde:reservations:missing'))
+
+    def test_cancel_wins_before_allocation_without_claiming_hardware(self):
+        from labdiscoveryengine.scheduling.sync.web_api import _CANCEL_RESERVATION_SCRIPT
+        key='lde:reservations:waiting';self.redis.hset(key,mapping={'status':'pending','metadata':'{}'})
+        self.redis.sadd(key+':resources','resource-1')
+        self.redis.zadd('lde:resources:resource-1:queues:priorities',{'normal':0})
+        self.redis.rpush('lde:resources:resource-1:queues:normal','waiting')
+        self.redis.eval(_CANCEL_RESERVATION_SCRIPT,1,key,'waiting')
+        assign=self.redis.register_script((ROOT/'labdiscoveryengine/lua/assign_reservation_to_resource.lua').read_text())
+        self.assertFalse(assign(args=['resource-1']))
+        self.assertFalse(self.redis.exists('lde:resources:resource-1:assigned'))
+
     def test_quarantined_owner_blocks_next_allocation(self):
         assign = self.redis.register_script((ROOT / 'labdiscoveryengine/lua/assign_reservation_to_resource.lua').read_text())
         self.redis.set('lde:resources:resource-1:assigned', 'old-owner')

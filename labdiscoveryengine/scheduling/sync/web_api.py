@@ -245,6 +245,37 @@ def get_reservation_status(username: str, reservation_id: str, previous_reservat
 
     return reservation_status
 
+_CANCEL_RESERVATION_SCRIPT = """
+local key = KEYS[1]
+local state = redis.call('hget', key, 'status')
+if not state then return 0 end
+if state == 'finished' or state == 'broken' or state == 'unavailable' then return 1 end
+local next_state = 'cancelling'
+-- Allocation writes :assigned and the resource owner in one Lua operation.
+-- Cancellation must make this decision atomically against that allocation.
+-- Missing/corrupt ownership evidence is NOT proof that a session never started.
+local count = redis.call('scard', key .. ':resources')
+if (state == 'pending' or state == 'queued' or state == 'cancelling')
+    and redis.call('hexists', key, ':assigned') == 0
+    and redis.call('hexists', key, 'start_attempted') == 0
+    and redis.call('hexists', key, 'session_id') == 0
+    and count > 0 and count <= 1000 then
+    local owned = false
+    for _, resource in ipairs(redis.call('smembers', key .. ':resources')) do
+        if redis.call('get', 'lde:resources:' .. resource .. ':assigned') == ARGV[1] then
+            owned = true
+        end
+    end
+    if not owned then next_state = 'finished' end
+end
+redis.call('hset', key, 'status', next_state)
+redis.call('publish', key .. ':channel', next_state)
+-- Do not delete or expire any resource owner. Finished queue entries are
+-- already discarded by the allocator without acquiring physical hardware.
+return 1
+"""
+
+
 def cancel_reservation(user_identifier: str, reservation_id: str) -> bool:
     """
     Cancel a reservation.
@@ -261,11 +292,7 @@ def cancel_reservation(user_identifier: str, reservation_id: str) -> bool:
     if current_status in ReservationKeys.states.finished_states:
         return True
 
-    pipeline = redis_store.pipeline()
-    pipeline.hset(reservation_key, ReservationKeys.parameters.status, ReservationKeys.states.cancelling)
-    pipeline.publish(ReservationKeys(reservation_id).channel(), ReservationKeys.states.cancelling)
-    pipeline.execute()
-    return True
+    return bool(redis_store.eval(_CANCEL_RESERVATION_SCRIPT, 1, reservation_key, reservation_id))
         
 
 def get_reservation_list(user_identifier: str, user_role: str) -> List[str]:
