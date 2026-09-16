@@ -55,10 +55,13 @@ class StoredConfiguration(NamedTuple):
             resources={},
             variables={},
             last_check={
-                ConfigurationFileNames.configuration: datetime.datetime.utcfromtimestamp(0),
-                ConfigurationFileNames.resources: datetime.datetime.utcfromtimestamp(0),
-                ConfigurationFileNames.credentials: datetime.datetime.utcfromtimestamp(0),
-                ConfigurationFileNames.laboratories: datetime.datetime.utcfromtimestamp(0),
+                # Reproducible deployment archives legitimately use Unix epoch
+                # mtimes. Epoch is therefore not an unread-file sentinel: it
+                # would silently skip credentials/settings on the first load.
+                ConfigurationFileNames.configuration: datetime.datetime.min,
+                ConfigurationFileNames.resources: datetime.datetime.min,
+                ConfigurationFileNames.credentials: datetime.datetime.min,
+                ConfigurationFileNames.laboratories: datetime.datetime.min,
             }
         )
     

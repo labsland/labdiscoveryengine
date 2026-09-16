@@ -12,6 +12,25 @@ from labdiscoveryengine.configuration.storage import ConfigurationFileNames, get
 
 
 class ConfigurationStorageTestCase(unittest.TestCase):
+    def test_initial_load_reads_reproducible_epoch_timestamp_files(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            directory = Path(tmpdir)
+            self._write_environment_credential_configuration(directory)
+            (directory / 'credentials.yml').write_text(
+                'administrators: {}\nexternal:\n  tester:\n    password: hash\n    laboratories: [lab-1]\n')
+            for path in directory.glob('*.yml'):
+                os.utime(path, (0, 0))
+            app = Flask(__name__)
+            app.config['LABDISCOVERYENGINE_DIRECTORY'] = str(directory)
+            with mock.patch.dict(os.environ, {'TEST_RESOURCE_LOGIN':'user', 'TEST_RESOURCE_PASSWORD':'pass'}):
+                with app.app_context():
+                    config = get_latest_configuration()
+                    self.assertEqual(app.config['DEFAULT_MAX_TIME'], 180)
+                    self.assertIn('resource-1', config.resources)
+                    self.assertIn('lab-1', config.laboratories)
+                    self.assertIn('tester', config.external_users)
+                    self.assertIs(get_latest_configuration(config), config)
+
     def _write_environment_credential_configuration(self, deployment_dir):
         (deployment_dir / "configuration.yml").write_text(
             "DEFAULT_MAX_TIME: 180\n",
