@@ -1,4 +1,5 @@
 import socket
+import shutil
 import subprocess
 import tempfile
 import time
@@ -10,7 +11,7 @@ import redis
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT_PATH = ROOT / "labdiscoveryengine" / "lua" / "get_reservation_status.lua"
-REDIS_SERVER = "/opt/homebrew/bin/redis-server"
+REDIS_SERVER = shutil.which('redis-server')
 
 
 def _find_free_port() -> int:
@@ -19,6 +20,7 @@ def _find_free_port() -> int:
         return sock.getsockname()[1]
 
 
+@unittest.skipUnless(REDIS_SERVER, 'redis-server is required for isolated Lua tests')
 class ReservationStatusLuaScriptTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
