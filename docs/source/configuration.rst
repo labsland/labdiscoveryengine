@@ -36,6 +36,9 @@ or to the institution that is hosting the instance.
 
 The main variables are the following:
 
+Production ``REDIS_URL`` must point to persistent, non-evicting scheduling state,
+not a disposable cache. See :doc:`redis_durability` for the recovery contract.
+
 .. list-table::
    :widths: 25 50 25
    :header-rows: 1
@@ -46,6 +49,9 @@ The main variables are the following:
    * - ``SECRET_KEY``
      - The secret key that this instance will use. Should be unique and not shared.
      - ``ivTp3UApt7epzy0YzlNOEGirzKe1gHC4JQJc_rcuS2s``
+   * - ``REDIS_URL``
+     - Redis URL for durable scheduling state. Configure persistence separately on the Redis server.
+     - ``redis://127.0.0.1:6380/0``
    * - ``DEFAULT_LAB_VISIBILITY``
      - The default visibility of the laboratories. Can be ``public`` or ``private``.
      - ``public``

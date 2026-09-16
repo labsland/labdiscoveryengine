@@ -10,9 +10,11 @@ aioredis_store: Redis = create_proxied_instance(Redis)
 
 async def is_redis_flushed():
     """
-    If Redis is flushed (e.g., restarted), we have to restart everything (channels and everything).
+    Detect a missing worker marker; this is NOT proof that hardware is idle.
 
-    It's not ideal, but if happens we do not want to keep running normally.
+    Production assumes durable Redis and operator-gated recovery after state
+    loss (docs/source/redis_durability.rst). Reinitializing channels/this marker
+    cannot reconstruct ownership or authorize new reservations by itself.
     """
     return await aioredis_store.get('lde:running') != 'true'
 

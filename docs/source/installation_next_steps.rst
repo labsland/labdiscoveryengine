@@ -1,6 +1,13 @@
 Installation: next steps
 ========================
 
+.. important::
+
+   Before production hardware reservations, configure persistent, non-evicting
+   Redis and qualify :doc:`redis_durability`. Installing Redis or choosing a
+   database number is not sufficient. Never rebuild an empty queue while physical
+   sessions might still be running.
+
 Adding users
 ------------
 
