@@ -41,6 +41,18 @@ From that moment, you will have a setup up and running, with four configuration 
 
 ## Full documentation
 
+### Production Redis is durable state, not a cache
+
+LDE assumes its production Redis scheduling and ownership state survives service
+restarts. Use persistent storage (AOF with `appendfsync everysec` or `always`),
+`maxmemory-policy noeviction`, and a recovery procedure that blocks admission
+after uncertain state loss. An empty database does **not** prove hardware is idle.
+
+Read [Redis durability and recovery](docs/source/redis_durability.rst) before
+deploying, moving, restoring or restarting a scheduler. The application does not
+enable persistence for you. Disposable Redis is only appropriate for isolated
+development/tests without real hardware sessions.
+
 https://developers.labsland.com/labdiscoveryengine/en/stable/
 
 ## Development
