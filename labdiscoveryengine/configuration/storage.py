@@ -349,7 +349,10 @@ def _parse_healthchecks_config(config: Optional[dict]) -> List[Healthcheck]:
         if healthcheck_type == 'robotchecker':
             result.append(RobotcheckerHealthcheck(identifier=healthcheck_identifier, url=healthcheck_url, timeout=timeout))
         elif healthcheck_type == 'json-success':
-            result.append(JsonSuccessHealthcheck(identifier=healthcheck_identifier, url=healthcheck_url, timeout=timeout))
+            idle_only = healthcheck_properties.get('idle_only', False)
+            if not isinstance(idle_only, bool):
+                raise InvalidConfigurationValueError('json-success idle_only must be a boolean')
+            result.append(JsonSuccessHealthcheck(identifier=healthcheck_identifier, url=healthcheck_url, timeout=timeout, idle_only=idle_only))
         else:
             result.append(HttpHealthcheck(identifier=healthcheck_identifier, url=healthcheck_url, timeout=timeout))
 

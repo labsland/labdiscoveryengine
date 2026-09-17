@@ -4,6 +4,7 @@ import datetime
 import logging
 from typing import Optional
 import aiohttp
+from redis.exceptions import WatchError
 
 from labdiscoveryengine.data import Resource, RobotcheckerHealthcheck, JsonSuccessHealthcheck
 from labdiscoveryengine.scheduling.data import ResourceHealth
@@ -70,6 +71,34 @@ class ResourceHealthchecksWorker:
                 await asyncio.sleep(self.minimum_time_between_checks)
 
     async def check_robotchecker_health(self):
+        # Some readiness endpoints deliberately fail during an owned session's
+        # cleanup. Opt-in deployments must not cache that transient failure as
+        # idle hardware health. WATCH detects even an acquire/release cycle that
+        # occurs entirely during the HTTP checks; a before/after GET cannot.
+        idle_only = any(isinstance(check, JsonSuccessHealthcheck) and check.idle_only
+                        for check in self.resource.healthchecks)
+        if idle_only:
+            async with aioredis_store.pipeline() as pipeline:
+                try:
+                    await pipeline.watch(self.resource_keys.assigned())
+                    if await pipeline.get(self.resource_keys.assigned()):
+                        return  # Keep the old timestamp; do not pretend it was checked.
+                    status, message, source = await self._collect_health()
+                    pipeline.multi()
+                    pipeline.hset(self.resource_keys.health(), mapping=self._health_mapping(status, message, source))
+                    await pipeline.execute()
+                except WatchError:
+                    return  # Owned or changed while probing; discard the sample.
+            return
+        status, message, source = await self._collect_health()
+        if status == ResourceHealth.states.broken:
+            await self.mark_as_broken(message, source=source)
+        elif status == ResourceHealth.states.healthy:
+            await self.mark_as_fixed(source=source)
+        else:
+            await self.mark_as_unknown(message, source=source)
+
+    async def _collect_health(self):
         robotchecker_healthchecks = [
             healthcheck
             for healthcheck in self.resource.healthchecks
@@ -77,8 +106,7 @@ class ResourceHealthchecksWorker:
         ]
 
         if not robotchecker_healthchecks:
-            await self.mark_as_unknown(source="no-robotchecker")
-            return
+            return ResourceHealth.states.unknown, None, 'no-robotchecker'
 
         states = []
         source = ('configured-checks' if any(isinstance(check, JsonSuccessHealthcheck)
@@ -95,15 +123,13 @@ class ResourceHealthchecksWorker:
                 state.message or "checker reported the resource as broken"
                 for state in broken_states
             )
-            await self.mark_as_broken(message, source=source)
-            return
+            return ResourceHealth.states.broken, message, source
 
         if any(state.status == ResourceHealth.states.healthy for state in states):
-            await self.mark_as_fixed(source=source)
-            return
+            return ResourceHealth.states.healthy, None, source
 
         messages = [state.message for state in states if state.message]
-        await self.mark_as_unknown("; ".join(messages) or None, source=source)
+        return ResourceHealth.states.unknown, "; ".join(messages) or None, source
 
     async def _run_json_success_healthcheck(self, healthcheck):
         # Explicit opt-in: do not reinterpret existing generic HTTP camera/debug
@@ -175,12 +201,16 @@ class ResourceHealthchecksWorker:
         await self._write_health(ResourceHealth.states.unknown, message, source=source)
 
     async def _write_health(self, status: str, message: Optional[str], source: str):
-        await aioredis_store.hset(self.resource_keys.health(), mapping={
+        await aioredis_store.hset(self.resource_keys.health(), mapping=self._health_mapping(status, message, source))
+
+    @staticmethod
+    def _health_mapping(status, message, source):
+        return {
             "status": status,
             "message": message or "",
             "source": source,
             "checked_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-        })
+        }
 
     async def start(self):
         if self.task is not None:

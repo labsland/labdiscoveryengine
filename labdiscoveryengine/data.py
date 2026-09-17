@@ -63,7 +63,9 @@ class RobotcheckerHealthcheck(HttpHealthcheck):
 
 class JsonSuccessHealthcheck(HttpHealthcheck):
     """Opt-in passive endpoint requiring HTTP 200 and JSON success=true."""
-    pass
+    def __init__(self, identifier: str, url: str, timeout: float = 10, idle_only: bool = False):
+        super().__init__(identifier, url, timeout)
+        self.idle_only = idle_only
 
 class Camera:
     """
