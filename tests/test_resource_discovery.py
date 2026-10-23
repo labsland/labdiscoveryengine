@@ -13,7 +13,7 @@ class ResourceDiscoveryTest(unittest.TestCase):
                 api='labdiscoverylib-v1.0',login='private-login',password='private-password') for name in ('r1','r2','other')})
         store=MagicMock()
         store.pipeline.return_value.execute.side_effect=[
-            [None,dict(status='healthy',checked_at='date'), 'owner',dict(status='healthy')],
+            [None,dict(status='healthy',checked_at='date'), None, 'owner',dict(status='healthy'), None],
             [dict(status='broken',reconciliation_required='1')]]
         with patch.object(discovery,'lde_config',config),patch.object(discovery,'redis_store',store):
             result=discovery.discover_resources('lab')

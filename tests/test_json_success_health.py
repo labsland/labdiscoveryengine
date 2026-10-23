@@ -41,7 +41,7 @@ class JsonSuccessHealthTest(unittest.IsolatedAsyncioTestCase):
         pipeline.execute = AsyncMock()
         factory = MagicMock()
         factory.return_value.__aenter__ = AsyncMock(return_value=pipeline)
-        with patch('labdiscoveryengine.scheduling.asyncio.healthcheck_worker.aioredis_store',SimpleNamespace(pipeline=factory)):
+        with patch('labdiscoveryengine.scheduling.asyncio.healthcheck_worker.aioredis_store',SimpleNamespace(pipeline=factory, exists=AsyncMock(return_value=0))):
             await self.worker.check_robotchecker_health()
         self.worker._collect_health.assert_not_called()
         pipeline.execute.assert_not_called()
@@ -56,9 +56,9 @@ class JsonSuccessHealthTest(unittest.IsolatedAsyncioTestCase):
             pipeline.execute=AsyncMock(side_effect=WatchError() if conflict else None)
             factory=MagicMock()
             factory.return_value.__aenter__=AsyncMock(return_value=pipeline)
-            with patch('labdiscoveryengine.scheduling.asyncio.healthcheck_worker.aioredis_store',SimpleNamespace(pipeline=factory)):
+            with patch('labdiscoveryengine.scheduling.asyncio.healthcheck_worker.aioredis_store',SimpleNamespace(pipeline=factory, exists=AsyncMock(return_value=0))):
                 await self.worker.check_robotchecker_health()
-            pipeline.watch.assert_awaited_once_with('lde:resources:board-1:assigned')
+            pipeline.watch.assert_awaited_once_with('lde:resources:board-1:assigned', 'lde:resources:board-1:maintenance')
             pipeline.execute.assert_awaited_once()
             self.assertEqual(pipeline.hset.call_args.kwargs['mapping']['status'],'broken')
 
@@ -92,6 +92,7 @@ class JsonSuccessHealthTest(unittest.IsolatedAsyncioTestCase):
             ResourceHealth('board-1', ResourceHealth.states.broken, message='controller')])
         self.worker.mark_as_broken = AsyncMock()
         self.worker.mark_as_fixed = AsyncMock()
-        await self.worker.check_robotchecker_health()
+        with patch('labdiscoveryengine.scheduling.asyncio.healthcheck_worker.aioredis_store', SimpleNamespace(exists=AsyncMock(return_value=0))):
+            await self.worker.check_robotchecker_health()
         self.worker.mark_as_broken.assert_called_once()
         self.worker.mark_as_fixed.assert_not_called()

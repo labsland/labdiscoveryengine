@@ -65,6 +65,9 @@ def create_proxied_instance(klass: type):
 
         def set_proxied_object(self, obj: klass):
             self._obj = obj
+            # Cached wrappers bind methods of the previous client. Reconnecting
+            # must not continue using its pool (or another deployment in tests).
+            self._method_cache.clear()
 
         def get_proxied_object(self):
             return self._obj

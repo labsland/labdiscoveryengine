@@ -9,7 +9,23 @@ jobs:
       - image: cimg/python:<< parameters.python_version >>-node
       - image: cimg/redis:6.2.6
     steps:
-      - checkout
+      - run:
+          name: Check out exact public source revision
+          command: |
+            # This repository is public. Avoid a stale injected SSH deploy key;
+            # fetch the exact pipeline commit without credentials or trust edits.
+            [[ "$CIRCLE_SHA1" =~ ^[0-9a-f]{40}$ ]]
+            git init .
+            git remote add origin https://github.com/labsland/labdiscoveryengine.git
+            git fetch --depth=1 origin "$CIRCLE_SHA1"
+            git checkout --detach FETCH_HEAD
+            test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
+      - run:
+          name: Install disposable Redis test executable
+          command: |
+            sudo apt-get update
+            sudo apt-get install --no-install-recommends -y redis-server
+            command -v redis-server
       - run:
           name: Install dependencies
           command: pip install -r requirements.txt
