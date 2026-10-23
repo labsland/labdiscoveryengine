@@ -2,6 +2,8 @@ import asyncio
 import ast
 import datetime
 import logging
+import uuid
+from pathlib import Path
 from typing import Optional
 import aiohttp
 from redis.exceptions import WatchError
@@ -71,17 +73,59 @@ class ResourceHealthchecksWorker:
                 await asyncio.sleep(self.minimum_time_between_checks)
 
     async def check_robotchecker_health(self):
+        from labdiscoveryengine.scheduling.asyncio import redis as scheduler_redis
+        from labdiscoveryengine.scheduling.maintenance import BEGIN_PROBE, END_PROBE, CHECK_PROBE
+        from labdiscoveryengine.scheduling.serial_recovery import save, read_probe_journals
+        if self.resource_name not in scheduler_redis.maintenance_resources:
+            return await self._check_robotchecker_health()
+        # Serial maintenance must yield to an already running hardware probe.
+        # No TTL: cancellation/crash uncertainty must not imply it is safe to
+        # reopen the transport. A stale probe requires operator reconciliation.
+        owner = uuid.uuid4().hex
+        epoch = scheduler_redis.maintenance_run_id
+        base = self.resource_keys.base()
+        folder = scheduler_redis.maintenance_state_dir
+        if any(s['resource'] == self.resource_name and s['phase'] == 'running'
+               for s in read_probe_journals(folder)):
+            return
+        acquired = await aioredis_store.eval(BEGIN_PROBE, 1, base, owner, epoch)
+        if not acquired:
+            return
+        journal = Path(folder) / (self.resource_name + '.probe')
+        state = dict(resource=self.resource_name, owner=owner, phase='running')
+        # fsync before sending any HTTP. Redis rollback cannot erase evidence
+        # that a backend may still be handling this request.
+        save(journal, state)
+        if not await aioredis_store.eval(CHECK_PROBE, 1, base, owner, epoch):
+            return  # Intent survives; never send HTTP under a new/lost epoch.
+        self._probe_transport_uncertain = False
+        try:
+            result = await self._check_robotchecker_health()
+        except BaseException:
+            # A canceled request may still be executing at the backend.
+            raise
+        else:
+            if not self._probe_transport_uncertain:
+                save(journal, dict(state, phase='closed'))
+                await aioredis_store.eval(END_PROBE, 1, base, owner)
+            return result
+
+    async def _check_robotchecker_health(self):
         # Some readiness endpoints deliberately fail during an owned session's
         # cleanup. Opt-in deployments must not cache that transient failure as
         # idle hardware health. WATCH detects even an acquire/release cycle that
         # occurs entirely during the HTTP checks; a before/after GET cannot.
         idle_only = any(isinstance(check, JsonSuccessHealthcheck) and check.idle_only
                         for check in self.resource.healthchecks)
+        # Maintenance also excludes probing endpoints that can touch hardware.
+        if await aioredis_store.exists(self.resource_keys.maintenance()):
+            return
         if idle_only:
             async with aioredis_store.pipeline() as pipeline:
                 try:
-                    await pipeline.watch(self.resource_keys.assigned())
-                    if await pipeline.get(self.resource_keys.assigned()):
+                    await pipeline.watch(self.resource_keys.assigned(), self.resource_keys.maintenance())
+                    if (await pipeline.get(self.resource_keys.assigned()) or
+                            await pipeline.get(self.resource_keys.maintenance())):
                         return  # Keep the old timestamp; do not pretend it was checked.
                     status, message, source = await self._collect_health()
                     pipeline.multi()
@@ -142,7 +186,7 @@ class ResourceHealthchecksWorker:
                         payload = await response.json()
                         healthy = isinstance(payload, dict) and payload.get('success') is True
         except Exception:
-            pass
+            self._probe_transport_uncertain = True
         return ResourceHealth(resource=self.resource_name,
             status=ResourceHealth.states.healthy if healthy else ResourceHealth.states.broken,
             message=None if healthy else f'{healthcheck.identifier}: success was not confirmed',
@@ -162,6 +206,7 @@ class ResourceHealthchecksWorker:
                         )
                     payload = await response.json()
         except Exception as err:
+            self._probe_transport_uncertain = True
             return ResourceHealth(
                 resource=self.resource_name,
                 status=ResourceHealth.states.unknown,

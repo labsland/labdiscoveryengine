@@ -10,6 +10,8 @@ class Config:
     SECRET_KEY: str = os.environ.get('SECRET_KEY') or 'secret'
 
     REDIS_URL: str = os.environ.get('REDIS_URL') or 'redis://localhost:6379/0'
+    SERIAL_RECOVERY_STATE_DIR: Optional[str] = os.environ.get('SERIAL_RECOVERY_STATE_DIR')
+    SERIAL_RECOVERY_RESOURCES: str = os.environ.get('SERIAL_RECOVERY_RESOURCES') or ''
 
     DEFAULT_MAX_TIME: float = float(os.environ.get('DEFAULT_MAX_TIME') or '300')
     DEFAULT_RESOURCE_LOGIN: Optional[str] = os.environ.get('DEFAULT_RESOURCE_LOGIN')

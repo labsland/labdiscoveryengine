@@ -54,6 +54,9 @@ class ResourceKeys:
     def assigned(self) -> str:
         return f"{self.base()}:assigned"
 
+    def maintenance(self) -> str:
+        return f"{self.base()}:maintenance"
+
     def health(self) -> str:
         return f"{self.base()}:health"
     

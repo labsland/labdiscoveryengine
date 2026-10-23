@@ -12,10 +12,21 @@
 
 local resource = ARGV[1]
 
+-- Managed recovery deployments bind admission to the Redis process whose
+-- durable maintenance journals were reconciled at worker startup. A Redis
+-- restart must not admit work from an older AOF snapshot before reconciliation.
+if ARGV[2] and ARGV[2] ~= '' then
+    local run_id = string.match(redis.call('INFO', 'server'), 'run_id:(%x+)')
+    if run_id ~= ARGV[2] or redis.call('get', 'lde:running') ~= 'true' then
+        return false
+    end
+end
+
 -- Ownership survives uncertain startup/cleanup and worker restart. Never pop
 -- another queue while this physical resource is assigned, even if its previous
 -- reservation is marked broken. Only verified cleanup may release the marker.
-if redis.call("exists", "lde:resources:" .. resource .. ":assigned") == 1 then
+if redis.call("exists", "lde:resources:" .. resource .. ":assigned") == 1 or
+   redis.call("exists", "lde:resources:" .. resource .. ":maintenance") == 1 then
     return false
 end
 
