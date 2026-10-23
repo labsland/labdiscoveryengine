@@ -21,6 +21,12 @@ jobs:
             git checkout --detach FETCH_HEAD
             test "$(git rev-parse HEAD)" = "$CIRCLE_SHA1"
       - run:
+          name: Install disposable Redis test executable
+          command: |
+            sudo apt-get update
+            sudo apt-get install --no-install-recommends -y redis-server
+            command -v redis-server
+      - run:
           name: Install dependencies
           command: pip install -r requirements.txt
       - run:
