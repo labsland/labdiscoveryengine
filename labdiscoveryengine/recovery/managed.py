@@ -101,7 +101,7 @@ class ManagedAdapter:
         if epoch is not None:
             args += ['--epoch', epoch]
         args += [action]
-        return json.loads(execute(args, timeout=330 if action == 'run' else 120))
+        return json.loads(execute(args, timeout=330 if action == 'run' else 150 if action == 'wait-controller' else 120))
 
     def generation(self):
         stores = {}
@@ -173,6 +173,9 @@ class ManagedAdapter:
         resource = self.plan['resources'][name]
         for boundary in resource['execution_boundaries']:
             self.boundary(boundary, 'start', epoch)
+        ready = self.boundary(resource['controller_boundary'], 'wait-controller', epoch)
+        if ready.get('profile') != 'controller-worker-ready-v1':
+            raise RuntimeError('Controller task loop is not ready for restoration')
         # This is a component-provided, qualified family adapter, not a generic
         # healthy HTTP endpoint or a shell fragment derived from numbering.
         receipt = self.boundary(resource['restore_boundary'], 'run', epoch)

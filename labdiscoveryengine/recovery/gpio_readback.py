@@ -5,6 +5,34 @@ import time
 import yaml
 
 
+def wait_worker(plan, epoch, identity, connection, require_epoch, sleep=time.sleep, clock=time.monotonic):
+    """Wait for completed worker iterations before issuing a physical reset.
+
+    Supervisor RUNNING only proves the process stayed alive. Legacy GPIO
+    initialization can take tens of seconds before the task loop starts.
+    """
+    config = plan['gpio_readback']
+    timeout = config.get('startup_timeout', 120)
+    if type(timeout) not in (int, float) or not 1 <= timeout <= 120:
+        raise ValueError('Bounded controller startup timeout required')
+    before = identity()
+    previous = connection.get(config['heartbeat_key'])
+    samples = 0
+    deadline = clock() + timeout
+    while clock() < deadline:
+        require_epoch(epoch)
+        current = connection.get(config['heartbeat_key'])
+        if current and current != previous:
+            samples += 1
+        previous = current
+        if samples >= 2:
+            if identity() != before:
+                raise RuntimeError('Controller changed during startup')
+            return dict(profile='controller-worker-ready-v1', heartbeat_samples=samples)
+        sleep(.2)
+    raise RuntimeError('Controller worker did not finish initialization')
+
+
 def verify(plan, epoch, identity, connection, require_epoch, sleep=time.sleep, clock=time.monotonic,
            gpio_root=Path('/sys/class/gpio')):
     config = plan['gpio_readback']

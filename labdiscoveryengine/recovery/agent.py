@@ -336,7 +336,7 @@ def main():
     parser.add_argument('--plan', required=True)
     parser.add_argument('--epoch')
     parser.add_argument('--program')
-    parser.add_argument('action', choices=['inspect', 'fence', 'retire', 'start', 'enter', 'verify-gpio', 'run'])
+    parser.add_argument('action', choices=['inspect', 'fence', 'retire', 'start', 'enter', 'wait-controller', 'verify-gpio', 'run'])
     args = parser.parse_args()
     plan = load(args.plan)
     if args.action == 'enter':
@@ -346,11 +346,12 @@ def main():
         elif args.action == 'fence': result = fence(plan,args.epoch)
         elif args.action == 'retire': result = retire(plan,args.epoch)
         elif args.action == 'run': result = run_transient(plan,args.program,args.epoch)
-        elif args.action == 'verify-gpio':
-            from .gpio_readback import verify
+        elif args.action in ('verify-gpio', 'wait-controller'):
+            from .gpio_readback import verify, wait_worker
             connection = client(plan['stores'][plan['gpio_readback']['store_index']])
             try:
-                result = verify(plan,args.epoch,lambda:identity(plan),connection,lambda epoch:require_epoch(plan,epoch))
+                operation = verify if args.action == 'verify-gpio' else wait_worker
+                result = operation(plan,args.epoch,lambda:identity(plan),connection,lambda epoch:require_epoch(plan,epoch))
             finally: connection.close()
         else: result = start(plan,args.epoch)
     print(json.dumps(result))

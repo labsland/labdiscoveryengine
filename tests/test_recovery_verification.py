@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import Mock, patch
 from tests.test_lab_recovery import pkg
-from recovery_under_test.gpio_readback import verify
+from recovery_under_test.gpio_readback import verify, wait_worker
 from recovery_under_test.health import ReadinessCache
 from recovery_under_test.managed import ManagedAdapter
 
@@ -50,6 +50,31 @@ class BaselineReadback(unittest.TestCase):
         self.identity.side_effect=[dict(programs={'keyboard':dict(state='STOPPED',pid=0)}),
                                    dict(programs={'keyboard':dict(state='STOPPED',pid=1)})]
         with self.assertRaises(RuntimeError):self.check()
+
+    def test_slow_controller_initialization_precedes_physical_baseline(self):
+        self.connection.get.side_effect=lambda key:None if self.clock<55 else str(self.clock)
+        result=wait_worker(self.plan,'epoch',self.identity,self.connection,Mock(),sleep=self.wait,clock=lambda:self.clock)
+        self.assertEqual(result['heartbeat_samples'],2)
+        self.assertGreaterEqual(self.clock,55)
+        self.assertLess(self.clock,120)
+
+    def test_process_alive_without_task_loop_times_out(self):
+        self.connection.get.side_effect=None;self.connection.get.return_value=None
+        with self.assertRaisesRegex(RuntimeError,'did not finish initialization'):
+            wait_worker(self.plan,'epoch',self.identity,self.connection,Mock(),sleep=self.wait,clock=lambda:self.clock)
+
+
+class RestoreOrdering(unittest.TestCase):
+    def test_no_programming_before_controller_ready(self):
+        resource=dict(execution_boundaries=['runner','controller'],controller_boundary='controller',restore_boundary='baseline')
+        adapter=ManagedAdapter(dict(stores={'scheduler':'redis://localhost/0'},resources={'board':resource}))
+        calls=[]
+        def boundary(config,action,epoch):
+            calls.append((config,action))
+            if action=='wait-controller':raise RuntimeError('initializing')
+        adapter.boundary=boundary
+        with self.assertRaises(RuntimeError):adapter.restore('board','epoch')
+        self.assertEqual(calls,[('runner','start'),('controller','start'),('controller','wait-controller')])
 
 
 class Readiness(unittest.TestCase):
