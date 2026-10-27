@@ -1,4 +1,5 @@
 from typing import List
+import os
 
 from flask import current_app
 from redis.asyncio.client import Redis
@@ -69,9 +70,21 @@ async def initialize_redis():
         maintenance_resources = set(resources)
         maintenance_state_dir = folder
 
+    recovery_file = current_app.config.get('LAB_RECOVERY_STATE_FILE')
+    if os.environ.get('LAB_RECOVERY_MANAGED') == '1' and not recovery_file:
+        raise RuntimeError('Managed scheduler requires a recovery receipt')
+    if recovery_file:
+        import json
+        from pathlib import Path
+        from labdiscoveryengine.recovery.state import trusted_read
+        state = trusted_read(recovery_file)
+        run_id = (await redis_obj.info('server'))['run_id']
+        if state.get('phase') != 'managed' or state['generation']['stores']['scheduler'] != run_id:
+            raise RuntimeError('Laboratory recovery has not fenced this Redis generation')
+        maintenance_run_id = run_id
     await aioredis_store.set("lde:running", "true")
     await async_lua_scripts.initialize_asyncio_lua_scripts()
-    if maintenance_run_id:
+    if folder and maintenance_run_id:
         await redis_obj.set("lde:serial-recovery-resources", ','.join(sorted(maintenance_resources)))
         await redis_obj.set("lde:serial-recovery-protocol", "cdc-v1:" + maintenance_run_id)
 
@@ -113,6 +126,18 @@ class AsyncLuaScripts:
         """
         Stores a reservation in the redis database in a single transaction
         """
-        return await self._run_lua_script(ScriptNames.assign_reservation_to_resource, args=[resource_name, maintenance_run_id])
+        epoch = ''
+        recovery_file = current_app.config.get('LAB_RECOVERY_STATE_FILE')
+        if recovery_file:
+            import json
+            from pathlib import Path
+            from labdiscoveryengine.recovery.state import trusted_read
+            state = trusted_read(recovery_file)
+            item = state.get('resources', {}).get(resource_name, {})
+            if state.get('phase') != 'managed' or item.get('phase') != 'ready':
+                return None
+            epoch = item['epoch']
+        return await self._run_lua_script(ScriptNames.assign_reservation_to_resource,
+                                         args=[resource_name, maintenance_run_id, epoch])
 
 async_lua_scripts = AsyncLuaScripts()

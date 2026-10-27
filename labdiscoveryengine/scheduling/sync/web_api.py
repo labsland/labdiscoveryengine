@@ -118,6 +118,22 @@ def add_reservation(reservation_request: ReservationRequest) -> ReservationStatu
                 feature_filtered_resources.append(resource_name)
         candidate_resources = feature_filtered_resources
 
+    from flask import current_app, has_app_context
+    recovery_file = current_app.config.get('LAB_RECOVERY_STATE_FILE') if has_app_context() else None
+    if recovery_file:
+        from pathlib import Path
+        try:
+            from labdiscoveryengine.recovery.state import trusted_read
+            recovery = trusted_read(recovery_file)
+            candidate_resources = [name for name in candidate_resources
+                if recovery.get('phase') == 'managed' and
+                   recovery.get('resources', {}).get(name, {}).get('phase') == 'ready']
+        except (OSError, ValueError, TypeError):
+            candidate_resources = []
+        if not candidate_resources:
+            _store_terminal_reservation(reservation_request, ReservationKeys.states.broken,
+                                        'Laboratory recovering; please reserve again')
+            return sync_lua_scripts.get_reservation_status(reservation_request.identifier)
     laboratory = lde_config.laboratories[reservation_request.laboratory]
     if not laboratory.bypass_resource_health:
         broken_health = []

@@ -17,15 +17,19 @@ class AbstractResourceClient:
 
     __meta__ = abc.ABCMeta
 
-    def __init__(self, resource: Resource):
+    def __init__(self, resource: Resource, recovery_epoch: Optional[str] = None):
         self.resource = resource
         self.base_url = resource.url
         if self.base_url.endswith('/'):
             self.base_url = self.base_url[:-1]
         self.resource_keys = ResourceKeys(resource.identifier)
         self.auth = aiohttp.BasicAuth(resource.login, resource.password)
+        headers = {}
+        # Captured by the atomic assignment, never inferred from current readiness.
+        if recovery_epoch:
+            headers['X-Lab-Recovery-Epoch'] = recovery_epoch
         self.client_session: Optional[aiohttp.ClientSession] = aiohttp.ClientSession(
-            auth=self.auth, connector=aiohttp.TCPConnector(keepalive_timeout=2)
+            auth=self.auth, headers=headers, connector=aiohttp.TCPConnector(keepalive_timeout=2)
         )
 
     async def __aenter__(self):
@@ -64,6 +68,7 @@ class AbstractResourceClient:
         body = self._get_start_body(reservation_request)
 
         async with self.client_session.post(url, json=body) as response:
+            response.raise_for_status()
             result: dict = await response.json()
         
         if result.get('error') or result.get('success', True) == False:
@@ -86,8 +91,14 @@ class AbstractResourceClient:
         for attempt in range(2):
             try:
                 async with self.client_session.get(url) as response:
+                    response.raise_for_status()
                     result: dict = await response.json()
-                return result.get('should_finish') or 0
+                value = result.get('should_finish') if isinstance(result, dict) else None
+                if (isinstance(value, bool) or not isinstance(value, (int, float))
+                        or not math.isfinite(value) or result.get('error')
+                        or result.get('success') is False):
+                    raise aiohttp.ClientError('Invalid laboratory status response')
+                return value
             except aiohttp.ServerDisconnectedError:
                 if attempt:
                     raise

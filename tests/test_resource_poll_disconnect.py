@@ -10,6 +10,7 @@ class Response:
         if isinstance(self.value, Exception): raise self.value
         return self
     async def __aexit__(self, *args): pass
+    def raise_for_status(self): pass
     async def json(self): return self.value
 
 class ResourcePollDisconnectTest(unittest.IsolatedAsyncioTestCase):

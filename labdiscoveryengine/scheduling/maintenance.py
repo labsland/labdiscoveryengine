@@ -10,6 +10,7 @@ import re
 
 ACQUIRE = """
 local base = KEYS[1]
+if redis.call('exists', base .. ':recovery-hold') == 1 then return 0 end
 if redis.call('exists', base .. ':maintenance') == 1 then return 0 end
 if redis.call('exists', base .. ':assigned') == 1 then return 0 end
 if redis.call('exists', base .. ':health-probe') == 1 then return 0 end
@@ -24,7 +25,7 @@ BEGIN_PROBE = """
 local info = redis.call('info', 'server')
 local run_id = string.match(info, 'run_id:([^\\r\\n]+)')
 if run_id ~= ARGV[2] or redis.call('get', 'lde:running') ~= 'true' then return 0 end
-if redis.call('exists', KEYS[1] .. ':maintenance') == 1 then return 0 end
+if redis.call('exists', KEYS[1] .. ':maintenance', KEYS[1] .. ':recovery-hold') > 0 then return 0 end
 return redis.call('set', KEYS[1] .. ':health-probe', ARGV[1], 'NX') and 1 or 0
 """
 
@@ -36,7 +37,7 @@ return redis.call('del',KEYS[1] .. ':health-probe')
 CHECK_PROBE = """
 local run_id = string.match(redis.call('info','server'), 'run_id:([^\\r\\n]+)')
 if run_id ~= ARGV[2] or redis.call('get','lde:running') ~= 'true' then return 0 end
-if redis.call('exists',KEYS[1] .. ':maintenance') == 1 then return 0 end
+if redis.call('exists',KEYS[1] .. ':maintenance',KEYS[1] .. ':recovery-hold') > 0 then return 0 end
 return redis.call('get',KEYS[1] .. ':health-probe') == ARGV[1] and 1 or 0
 """
 

@@ -20,8 +20,9 @@ def discover_resources(laboratory):
         pipe.get(ResourceKeys(name).assigned())
         pipe.hgetall(ResourceKeys(name).health())
         pipe.get(ResourceKeys(name).maintenance())
+        pipe.get('lde:resources:' + name + ':recovery-hold')
     snapshots = pipe.execute()
-    owners = [snapshots[i * 3] for i in range(len(names))]
+    owners = [snapshots[i * 4] for i in range(len(names))]
     pipe = redis_store.pipeline(transaction=True)
     for owner in owners:
         if owner:
@@ -30,13 +31,13 @@ def discover_resources(laboratory):
     resources = []
     for offset, name in enumerate(names):
         resource = lde_config.resources[name]
-        assigned, health, maintenance = snapshots[offset * 3:offset * 3 + 3]
+        assigned, health, maintenance, recovering = snapshots[offset * 4:offset * 4 + 4]
         owner = next(owner_records) if assigned else None
         health_status = health.get('status', 'unknown')
         # No assignment is NOT proof of idle after Redis/worker loss. Present
         # unknown, leaving admission/ownership to the existing scheduler.
         quarantined = assigned and (not owner or owner.get('reconciliation_required') or owner.get('status') == 'broken')
-        state = 'unavailable' if health_status == 'broken' or quarantined or maintenance else ('in_use' if assigned else 'unknown')
+        state = 'unavailable' if health_status == 'broken' or quarantined or maintenance or recovering else ('in_use' if assigned else 'unknown')
         resources.append(dict(id=name, label=name, features=sorted(resource.features),
                               state=state, health=health_status,
                               health_checked_at=health.get('checked_at')))

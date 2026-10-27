@@ -20,6 +20,10 @@ local reservation_key = "lde:reservations:" .. reservation_id
 local status = redis.call("hget", reservation_key, "status")
 message = redis.call("hget", reservation_key, "message")
 
+if redis.call('hexists', reservation_key, 'recovery_interrupted') == 1 then
+    return {'broken', false, false, false, 'Laboratory restarted; please reserve again', false}
+end
+
 if status == "pending" or status == "queued" then
 
     local resources = redis.call("smembers", reservation_key .. ":resources")

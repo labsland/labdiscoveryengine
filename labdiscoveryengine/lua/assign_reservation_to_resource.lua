@@ -30,6 +30,18 @@ if redis.call("exists", "lde:resources:" .. resource .. ":assigned") == 1 or
     return false
 end
 
+-- Recovery is independent of maintenance: neither mechanism may clear the other.
+if redis.call('exists', 'lde:resources:' .. resource .. ':recovery-hold') == 1 then
+    return false
+end
+if redis.call('exists','lde:resources:' .. resource .. ':recovery-epoch') == 1 and
+   (not ARGV[3] or ARGV[3] == '') then return false end
+if ARGV[3] and ARGV[3] ~= '' then
+    if redis.call('get', 'lde:resources:' .. resource .. ':recovery-epoch') ~= ARGV[3] then
+        return false
+    end
+end
+
 local reservation_id = false
 
 local priorities = redis.call("zrange", "lde:resources:" .. resource .. ":queues:priorities", 0, -1)
@@ -73,6 +85,9 @@ for _, priority in ipairs(priorities) do
 end
 
 if reservation_id ~= false then
+    if ARGV[3] and ARGV[3] ~= '' then
+        redis.call('hset', 'lde:reservations:' .. reservation_id, 'recovery_epoch', ARGV[3])
+    end
     redis.call("set", "lde:resources:" .. resource .. ":assigned", reservation_id)
 end
 

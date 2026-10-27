@@ -118,14 +118,16 @@ class ResourceHealthchecksWorker:
         idle_only = any(isinstance(check, JsonSuccessHealthcheck) and check.idle_only
                         for check in self.resource.healthchecks)
         # Maintenance also excludes probing endpoints that can touch hardware.
-        if await aioredis_store.exists(self.resource_keys.maintenance()):
+        if await aioredis_store.exists(self.resource_keys.maintenance(), self.resource_keys.base() + ':recovery-hold'):
             return
         if idle_only:
             async with aioredis_store.pipeline() as pipeline:
                 try:
-                    await pipeline.watch(self.resource_keys.assigned(), self.resource_keys.maintenance())
+                    await pipeline.watch(self.resource_keys.assigned(), self.resource_keys.maintenance(),
+                                         self.resource_keys.base() + ':recovery-hold')
                     if (await pipeline.get(self.resource_keys.assigned()) or
-                            await pipeline.get(self.resource_keys.maintenance())):
+                            await pipeline.get(self.resource_keys.maintenance()) or
+                            await pipeline.get(self.resource_keys.base() + ':recovery-hold')):
                         return  # Keep the old timestamp; do not pretend it was checked.
                     status, message, source = await self._collect_health()
                     pipeline.multi()
