@@ -27,6 +27,10 @@ if status and status ~= 'finished' and status ~= 'unavailable' then
  redis.call('HSET',KEYS[1],'status','broken','recovery_interrupted',ARGV[2],
             'message','Laboratory restarted; please reserve again')
  redis.call('PUBLISH',KEYS[1] .. ':channel','broken')
+ redis.call('EXPIRE',KEYS[1],3600)
+ redis.call('EXPIRE',KEYS[1] .. ':resources',3600)
+ local id = string.sub(KEYS[1],string.len('lde:reservations:')+1)
+ redis.call('EXPIRE','lde:external-request:' .. id,604800)
 end
 return 1
 """
@@ -76,6 +80,9 @@ for id,_ in pairs(ids) do
   redis.call('HSET',key,'status','broken','recovery_interrupted',ARGV[2],
              'message','Laboratory restarted; please reserve again')
   redis.call('PUBLISH',key .. ':channel','broken')
+  redis.call('EXPIRE',key,3600)
+  redis.call('EXPIRE',key .. ':resources',3600)
+  redis.call('EXPIRE','lde:external-request:' .. id,604800)
  end
 end
 redis.call('DEL',KEYS[1] .. ':assigned')

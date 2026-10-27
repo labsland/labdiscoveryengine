@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, patch
 import redis.asyncio
 from tests.test_maintenance_redis import MaintenanceRedis, ASSIGN
 from labdiscoveryengine.recovery.ownership import TRANSITION, OwnershipLost
-from labdiscoveryengine.recovery.managed import INTERRUPT_RESOURCE, RELEASE
+from labdiscoveryengine.recovery.managed import INTERRUPT, INTERRUPT_RESOURCE, RELEASE
 from labdiscoveryengine.scheduling.asyncio import redis as scheduler_redis
 from tests.test_async_processor_cleanup import build_processor, processor_module
 
@@ -52,6 +52,21 @@ class RecoveryRedis(unittest.IsolatedAsyncioTestCase):
         for action in ['claim','check','release','quarantine']:
             self.assertEqual(self.transition(action=action,status='ready'),0)
         self.assertEqual(self.r.hget('lde:reservations:student','status'),'broken')
+    async def test_interruption_expires_owner_records_like_normal_release(self):
+        for global_reset in (False,True):
+            with self.subTest(global_reset=global_reset):
+                self.r.flushdb();self.ready();self.assign()
+                key='lde:reservations:student'
+                self.r.sadd(key+':resources','board')
+                self.r.set('lde:external-request:student','receipt')
+                self.r.persist(key);self.r.persist(key+':resources')
+                if global_reset:self.r.eval(INTERRUPT,1,key,self.run_id,'f'*32)
+                else:self.interrupt()
+                self.assertEqual(self.r.hget(key,'status'),'broken')
+                for filename,seconds in [(key,3600),(key+':resources',3600),('lde:external-request:student',604800)]:
+                    self.assertGreater(self.r.ttl(filename),seconds-5)
+                    self.assertLessEqual(self.r.ttl(filename),seconds)
+
     async def test_recovery_preserves_unassigned_requests_for_healthy_peer(self):
         self.ready()
         self.assertEqual(self.interrupt(),1)
