@@ -80,6 +80,15 @@ def verify(plan, epoch, identity, connection, require_epoch, sleep=time.sleep, c
             for program in config['required_stopped']:
                 if after['programs'][program]['state'] not in ('STOPPED','EXITED'):
                     raise RuntimeError('Virtual peripheral remains active')
+            # The canonical reset removes file-backed virtual-peripheral state.
+            # These consumers are stopped above; stale state must not replay when
+            # a later session starts one of them. Do not delete evidence here.
+            for filename in config.get('required_absent_files', []):
+                path = Path(filename)
+                if not path.is_absolute() or '..' in path.parts:
+                    raise ValueError('Exact absolute peripheral state path required')
+                if path.exists() or path.is_symlink():
+                    raise RuntimeError('Virtual peripheral state remains after reset')
             return dict(profile='standard-sysfs-gpio-v1', configuration_sha256=hashlib.sha256(raw).hexdigest(),
                         outputs=values, heartbeat_samples=samples, verified_at=time.time())
         sleep(.2)

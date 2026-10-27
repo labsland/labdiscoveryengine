@@ -51,6 +51,14 @@ class BaselineReadback(unittest.TestCase):
                                    dict(programs={'keyboard':dict(state='STOPPED',pid=1)})]
         with self.assertRaises(RuntimeError):self.check()
 
+    def test_file_backed_commands_must_be_removed_by_canonical_reset(self):
+        pending=self.root/'pending.bin';pending.write_bytes(b'old-command')
+        self.plan['gpio_readback']['required_absent_files']=[str(pending)]
+        with self.assertRaisesRegex(RuntimeError,'peripheral state remains'):self.check()
+        self.assertEqual(pending.read_bytes(),b'old-command')
+        pending.unlink()
+        self.assertEqual(self.check()['heartbeat_samples'],2)
+
     def test_slow_controller_initialization_precedes_physical_baseline(self):
         self.connection.get.side_effect=lambda key:None if self.clock<55 else str(self.clock)
         result=wait_worker(self.plan,'epoch',self.identity,self.connection,Mock(),sleep=self.wait,clock=lambda:self.clock)
