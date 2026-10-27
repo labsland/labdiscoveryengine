@@ -70,6 +70,20 @@ class Recovery(unittest.TestCase):
         self.assertTrue(all(r['phase'] == 'ready' for r in state['resources'].values()))
         self.assertEqual(self.adapter.trace[:4], [('fence_scheduler', None), ('fence', 'one'),
                                                  ('fence', 'two'), ('interrupt', None)])
+    def test_storage_validation_failure_revokes_previously_ready_receipt(self):
+        self.coordinator.step()
+        self.adapter.generation = lambda: (_ for _ in ()).throw(RuntimeError('persistence failed'))
+        with self.assertRaises(RuntimeError):self.coordinator.step()
+        state = read(self.coordinator.path)
+        self.assertEqual(state['phase'], 'fencing')
+        self.assertEqual(state['resources'], {})
+
+    def test_validation_failure_mid_recovery_closes_healthy_peers(self):
+        state = self.coordinator.step()
+        self.adapter.generation = lambda: (_ for _ in ()).throw(RuntimeError('persistence failed'))
+        with self.assertRaises(GenerationChanged):self.coordinator._same_generation(state)
+        self.assertEqual(read(self.coordinator.path)['resources'], {})
+
     def test_ready_resources_are_not_reset_by_periodic_checks(self):
         self.coordinator.step(); self.adapter.trace = []; self.coordinator.step()
         self.assertFalse(any(event in ('restore', 'retire', 'interrupt') for event, _ in self.adapter.trace))
@@ -134,7 +148,8 @@ class Recovery(unittest.TestCase):
         self.adapter.restore = restore
         with self.assertRaises(GenerationChanged): self.coordinator.step()
         state = read(Path(self.tmp.name) / 'state.json')
-        self.assertEqual(state['resources']['one']['phase'], 'recovering')
+        self.assertEqual(state['phase'], 'fencing')
+        self.assertEqual(state['resources'], {})
         self.assertNotIn(('release', 'one'), self.adapter.trace)
     def test_corrupt_journal_does_not_initialize_or_touch_services(self):
         (Path(self.tmp.name) / 'state.json').write_text('broken')

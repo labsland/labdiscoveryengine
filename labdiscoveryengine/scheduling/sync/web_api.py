@@ -4,6 +4,7 @@ Methods that should be called from the web interface (not running in asyncio, an
 
 import datetime
 import json
+import os
 import time
 from typing import List, Dict, Optional
 
@@ -99,6 +100,11 @@ def initialize_web(app: Flask):
     """
     Initializes the web interface
     """
+    if os.environ.get('LAB_RECOVERY_MANAGED') == '1':
+        if not app.config.get('LAB_RECOVERY_STATE_FILE'):
+            raise RuntimeError('Managed scheduler requires a recovery receipt')
+        from labdiscoveryengine.recovery.redis_connection import FencedRedisProvider
+        redis_store.provider_class = FencedRedisProvider
     redis_store.init_app(app)
 
     sync_lua_scripts.initialize_web_lua_scripts()
@@ -126,7 +132,7 @@ def add_reservation(reservation_request: ReservationRequest) -> ReservationStatu
             from labdiscoveryengine.recovery.state import trusted_read
             recovery = trusted_read(recovery_file)
             candidate_resources = [name for name in candidate_resources
-                if recovery.get('phase') == 'managed' and
+                if recovery.get('phase') == 'managed' and recovery.get('scheduler_identity') and
                    recovery.get('resources', {}).get(name, {}).get('phase') == 'ready']
         except (OSError, ValueError, TypeError):
             candidate_resources = []

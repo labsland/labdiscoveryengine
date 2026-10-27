@@ -237,6 +237,10 @@ class ManagedAdapter:
         identity = self.scheduler_identity()
         if all(row['state'] == 'RUNNING' for row in identity['programs'].values()):
             return identity
+        # A previous attempt can have started the web process but failed to
+        # start its worker. Re-establish an empty scheduler boundary before
+        # approval, rather than waiting forever on assert-stopped.
+        self.fence_scheduler(epoch)
         execute(self.plan['storage_approve_command'] + ['--reason',
             'Managed cold-boundary laboratory recovery; interrupted sessions terminated; epoch ' + epoch,
             'approve'])

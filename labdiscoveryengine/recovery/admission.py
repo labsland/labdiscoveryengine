@@ -32,6 +32,8 @@ def snapshot(path, stores, resource=None, client_factory=redis.Redis.from_url,
             finally:
                 connection.close()
         if resource is not None:
+            if not state.get('scheduler_identity'):
+                raise Unavailable('scheduler-starting')
             item = state['resources'].get(resource, {})
             if item.get('phase') != 'ready':
                 raise Unavailable('resource-recovering')

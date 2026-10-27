@@ -58,7 +58,7 @@ class JsonSuccessHealthTest(unittest.IsolatedAsyncioTestCase):
             factory.return_value.__aenter__=AsyncMock(return_value=pipeline)
             with patch('labdiscoveryengine.scheduling.asyncio.healthcheck_worker.aioredis_store',SimpleNamespace(pipeline=factory, exists=AsyncMock(return_value=0))):
                 await self.worker.check_robotchecker_health()
-            pipeline.watch.assert_awaited_once_with('lde:resources:board-1:assigned', 'lde:resources:board-1:maintenance')
+            pipeline.watch.assert_awaited_once_with('lde:resources:board-1:assigned', 'lde:resources:board-1:maintenance', 'lde:resources:board-1:recovery-hold')
             pipeline.execute.assert_awaited_once()
             self.assertEqual(pipeline.hset.call_args.kwargs['mapping']['status'],'broken')
 

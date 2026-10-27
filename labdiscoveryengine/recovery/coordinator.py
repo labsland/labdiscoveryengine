@@ -32,9 +32,20 @@ class Coordinator:
         state['updated_at'] = self.clock()
         save(self.path, state)
 
+    def _close(self, state):
+        state.update(version=1, epoch=uuid.uuid4().hex, phase='fencing',
+                     generation=None, resources={}, scheduler_identity=None)
+        self._save(state)
+
     def _same_generation(self, state):
-        if self.adapter.generation() != state['generation']:
-            raise GenerationChanged('Storage or host generation changed during recovery')
+        try:
+            if self.adapter.generation() != state['generation']:
+                raise GenerationChanged('Storage or host generation changed during recovery')
+        except Exception as error:
+            # A persistence/validation failure can happen without a new Redis
+            # run ID. Revoke the receipt immediately, including healthy peers.
+            self._close(state)
+            raise GenerationChanged('Storage generation is no longer qualified') from error
 
     def step(self):
         with exclusive(self.directory / 'coordinator.lock'):
@@ -54,8 +65,15 @@ class Coordinator:
             self._save(state)
             self.adapter.ensure_dependencies(state['epoch'])
             return state
-        scheduler_changed = (state is not None and state.get('scheduler_identity') is not None
-                             and self.adapter.scheduler_identity() != state['scheduler_identity'])
+        except Exception:
+            self._close(state if state is not None else {})
+            raise
+        try:
+            scheduler_changed = (state is not None and state.get('scheduler_identity') is not None
+                                 and self.adapter.scheduler_identity() != state['scheduler_identity'])
+        except Exception:
+            self._close(state)
+            raise
         if state is None or state['generation'] != generation or scheduler_changed:
             state = dict(version=1, epoch=uuid.uuid4().hex, generation=generation,
                          phase='fencing', resources={})

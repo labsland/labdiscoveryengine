@@ -96,3 +96,15 @@ class ConfigurationFailure(unittest.TestCase):
             self.assertEqual(state['phase'],'fencing')
             self.assertEqual(state['resources'],{})
             self.assertIsNone(state['generation'])
+
+class PartialSchedulerStartup(unittest.TestCase):
+    def test_partial_start_is_fenced_before_reapproval_and_retry(self):
+        adapter=ManagedAdapter(dict(stores={'scheduler':'redis://localhost:6380/0'},resources={},
+            storage_approve_command=['qualified-approval'],scheduler_boundary={'command':['qualified-agent']}))
+        adapter.scheduler_identity=Mock(return_value={'programs':{'web':{'state':'RUNNING'},'worker':{'state':'FATAL'}}})
+        order=[]
+        adapter.fence_scheduler=Mock(side_effect=lambda epoch:order.append('fence'))
+        adapter.boundary=Mock(side_effect=lambda *args:order.append('start') or {'ready':True})
+        with patch('recovery_under_test.managed.execute',side_effect=lambda args:order.append('approve')):
+            self.assertEqual(adapter.start_scheduler('epoch'),{'ready':True})
+        self.assertEqual(order,['fence','approve','start'])

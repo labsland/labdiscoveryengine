@@ -25,7 +25,7 @@ with tempfile.TemporaryDirectory() as directory:
   from labsland_recovery.redis_connection import store_identity
   os.environ['LAB_RECOVERY_EXPECTED_REDIS_STORES']=json.dumps([dict(identity=store_identity(redis.ConnectionPool.from_url(url)),run_id=runid)])
   app=Flask(__name__);app.config.update(SECRET_KEY='fixture',WEBLAB_USERNAME='fixture',WEBLAB_PASSWORD='fixture',WEBLAB_REDIS_URL=url,WEBLAB_REDIS_BASE='fixture',WEBLAB_REDIS_CLIENT_FACTORY=fenced_redis,WEBLAB_AUTOCLEAN_THREAD=False,WEBLAB_TASK_THREADS_PROCESS=0)
-  state=dict(version=1,phase='managed',generation=dict(boot='fixture',stores={'backend':runid}),resources={'board':dict(phase='ready',epoch='a'*32)})
+  state=dict(version=1,phase='managed',scheduler_identity={'fixture':True},generation=dict(boot='fixture',stores={'backend':runid}),resources={'board':dict(phase='ready',epoch='a'*32)})
   boot=Path(directory)/'boot';boot.write_text('fixture')
   original=admission.snapshot
   with patch.object(admission,'trusted_read',lambda _:state),patch.object(admission,'snapshot',lambda path,stores,resource=None:original(path,stores,resource,boot_path=str(boot))):
@@ -40,6 +40,9 @@ with tempfile.TemporaryDirectory() as directory:
    def reserve(epoch):
     data=dict(client_initial_data={},server_initial_data={'priority.queue.slot.start.timestamp':str(time.time()),'priority.queue.slot.start':datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.0'),'priority.queue.slot.length':300,'request.username':'test','request.full_name':'Fixture','request.username.unique':'fixture','request.locale':'en','request.experiment_id.experiment_name':'fixture','request.experiment_id.category_name':'fixture'},back='https://example.invalid/')
     return admin.post('/weblab/sessions/',data=json.dumps(data),headers={'Authorization':'Basic '+base64.b64encode(b'fixture:fixture').decode(),'X-Lab-Recovery-Epoch':epoch})
+   identity=state.pop('scheduler_identity')
+   assert reserve('a'*32).status_code==503
+   state['scheduler_identity']=identity
    response=reserve('a'*32);assert response.status_code==200,response.data
    launch=response.get_json()['url'];old.get(launch,follow_redirects=True)
    assert old.post('/control').data==b'ACTUATED'
