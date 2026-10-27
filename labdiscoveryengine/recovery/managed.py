@@ -68,12 +68,8 @@ if redis.call('GET',KEYS[1] .. ':recovery-hold') ~= ARGV[2] then return 0 end
 local owner = redis.call('GET',KEYS[1] .. ':assigned')
 local ids = {}
 if owner then ids[owner] = true end
-for _,priority in ipairs(redis.call('ZRANGE',KEYS[1] .. ':queues:priorities',0,-1)) do
- local queue = KEYS[1] .. ':queues:' .. priority
- for _,id in ipairs(redis.call('LRANGE',queue,0,-1)) do ids[id] = true end
- redis.call('DEL',queue)
-end
-redis.call('DEL',KEYS[1] .. ':queues:priorities')
+-- Queued requests have never touched this hardware and may also be queued on
+-- healthy peers. Only the active owner is interrupted by resource recovery.
 for id,_ in pairs(ids) do
  local key = 'lde:reservations:' .. id
  if redis.call('EXISTS',key) == 1 then
@@ -101,7 +97,15 @@ class ManagedAdapter:
         if epoch is not None:
             args += ['--epoch', epoch]
         args += [action]
-        return json.loads(execute(args, timeout=330 if action == 'run' else 150 if action == 'wait-controller' else 120))
+        attempts = 3 if action == 'inspect' else 1
+        timeout = 40 if action == 'inspect' else 330 if action == 'run' else 150 if action == 'wait-controller' else 120
+        for attempt in range(attempts):
+            try:
+                return json.loads(execute(args, timeout=timeout))
+            except (OSError, RuntimeError, ValueError, subprocess.TimeoutExpired):
+                if attempt + 1 == attempts:
+                    raise
+                time.sleep(1)
 
     def generation(self):
         stores = {}

@@ -341,9 +341,13 @@ def main():
     plan = load(args.plan)
     if args.action == 'enter':
         return enter(plan,args.program)  # startProcess waits; cannot hold agent lock
+    if args.action == 'inspect':
+        # Observation never changes grants or state. Health readers must not
+        # contend with the coordinator and turn a lock collision into recovery.
+        print(json.dumps(identity(plan)))
+        return
     with exclusive(Path(plan['state_directory']) / (plan['id'] + '.lock')):
-        if args.action == 'inspect': result = identity(plan)
-        elif args.action == 'fence': result = fence(plan,args.epoch)
+        if args.action == 'fence': result = fence(plan,args.epoch)
         elif args.action == 'retire': result = retire(plan,args.epoch)
         elif args.action == 'run': result = run_transient(plan,args.program,args.epoch)
         elif args.action in ('verify-gpio', 'wait-controller'):

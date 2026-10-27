@@ -53,6 +53,7 @@ def verify(plan, epoch, identity, connection, require_epoch, sleep=time.sleep, c
     values = {}
     while clock() < deadline:
         require_epoch(epoch)
+        current = connection.get(config['heartbeat_key'])
         empty = all(connection.llen(key) == 0 for key in config['task_queues'])
         values = {}
         for name, row in outputs.items():
@@ -66,7 +67,6 @@ def verify(plan, epoch, identity, connection, require_epoch, sleep=time.sleep, c
             if value not in ('0','1'): raise RuntimeError('Invalid physical GPIO sample')
             values[name] = value == '1'
         baseline = all(values[name] == bool(row.get('active_low',False)) for name,row in outputs.items())
-        current = connection.get(config['heartbeat_key'])
         # A new heartbeat follows the worker's preceding complete task/ticker
         # iteration; two samples exclude an acknowledgement of queueing alone.
         if empty and baseline and current and current != heartbeat:

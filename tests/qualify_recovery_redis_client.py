@@ -50,6 +50,18 @@ class ConnectionGeneration(unittest.TestCase):
         self.addCleanup(client.connection_pool.disconnect)
         client.connection_pool.disconnect()
         self.assertTrue(client.ping())
+    def test_pubsub_reconnect_verifies_generation_before_resubscribing(self):
+        import os,time
+        from labsland_recovery.redis_connection import fenced_redis
+        with patch.dict(os.environ,LAB_RECOVERY_EXPECTED_REDIS_STORES=self.bindings()):
+            client=fenced_redis('redis://127.0.0.1:%s/0' % self.r.connection_pool.connection_kwargs['port'])
+        self.addCleanup(client.connection_pool.disconnect)
+        pubsub=client.pubsub();self.addCleanup(pubsub.close);pubsub.subscribe('qualification')
+        self.assertEqual(pubsub.get_message(timeout=2)['type'],'subscribe')
+        pubsub.connection.disconnect()
+        self.assertEqual(pubsub.get_message(timeout=2)['type'],'subscribe')
+        self.r.publish('qualification','after-reconnect')
+        self.assertEqual(pubsub.get_message(timeout=2)['data'],b'after-reconnect')
     def test_wrong_resolved_store_fails_at_startup(self):
         import os
         from labsland_recovery.redis_connection import fenced_redis,RedisGenerationChanged

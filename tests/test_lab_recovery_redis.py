@@ -52,6 +52,12 @@ class RecoveryRedis(unittest.IsolatedAsyncioTestCase):
         for action in ['claim','check','release','quarantine']:
             self.assertEqual(self.transition(action=action,status='ready'),0)
         self.assertEqual(self.r.hget('lde:reservations:student','status'),'broken')
+    async def test_recovery_preserves_unassigned_requests_for_healthy_peer(self):
+        self.ready()
+        self.assertEqual(self.interrupt(),1)
+        self.assertEqual(self.r.lrange(self.base+':queues:1',0,-1),['student'])
+        self.assertNotEqual(self.r.hget('lde:reservations:student','status'),'broken')
+        self.assertEqual(self.r.zrange(self.base+':queues:priorities',0,-1),['1'])
     async def test_release_requires_no_assignment_and_preserves_foreign_hold(self):
         self.ready();self.assign();self.r.set(self.base+':recovery-hold','f'*32)
         self.assertEqual(self.r.eval(RELEASE,1,self.base,self.run_id,'f'*32),0)
@@ -125,6 +131,19 @@ class ConnectionGeneration(unittest.TestCase):
         self.addCleanup(client.close)
         client.connection_pool.disconnect()
         self.assertTrue(client.ping())
+
+    def test_pubsub_reconnect_verifies_generation_before_resubscribing(self):
+        import os,time
+        from labdiscoveryengine.recovery.redis_connection import fenced_redis
+        with patch.dict(os.environ,LAB_RECOVERY_EXPECTED_REDIS_STORES=self.bindings()):
+            client=fenced_redis('redis://127.0.0.1:%s/0' % self.r.connection_pool.connection_kwargs['port'])
+        self.addCleanup(client.close)
+        pubsub=client.pubsub();self.addCleanup(pubsub.close);pubsub.subscribe('qualification')
+        self.assertEqual(pubsub.get_message(timeout=2)['type'],'subscribe')
+        pubsub.connection.disconnect()
+        self.assertEqual(pubsub.get_message(timeout=2)['type'],'subscribe')
+        self.r.publish('qualification','after-reconnect')
+        self.assertEqual(pubsub.get_message(timeout=2)['data'],b'after-reconnect')
     def test_wrong_resolved_store_fails_at_startup(self):
         import os
         from labdiscoveryengine.recovery.redis_connection import fenced_redis,RedisGenerationChanged

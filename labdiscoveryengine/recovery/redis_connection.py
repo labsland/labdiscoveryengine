@@ -7,6 +7,7 @@ The kernel boundary handles old hardware operations already in flight.
 import json
 import os
 import re
+import weakref
 from urllib.parse import urlsplit
 import redis
 
@@ -34,6 +35,8 @@ def connection_class(base, expected_run_id, expected_db=0):
 
         def connect(self, *args, **kwargs):
             self._generation_connecting = True
+            callbacks = self._connect_callbacks
+            self._connect_callbacks = []
             try:
                 super().connect(*args, **kwargs)
                 if self._sock is None:
@@ -53,7 +56,14 @@ def connection_class(base, expected_run_id, expected_db=0):
                 self.disconnect()
                 raise
             finally:
+                self._connect_callbacks = callbacks
                 self._generation_connecting = False
+            # PubSub resubscription sends application commands. It must happen
+            # after INFO proves the generation and outside the handshake bypass.
+            for registered in callbacks:
+                callback = registered() if isinstance(registered, weakref.ReferenceType) else registered
+                if callback is not None:
+                    callback(self)
 
         def send_packed_command(self, *args, **kwargs):
             # Base connect may authenticate/select a DB before the INFO check.

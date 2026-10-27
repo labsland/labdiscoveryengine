@@ -65,6 +65,19 @@ class BaselineReadback(unittest.TestCase):
 
 
 class RestoreOrdering(unittest.TestCase):
+    def test_transient_inspection_failure_is_retried_without_mutation(self):
+        from recovery_under_test import managed
+        adapter=ManagedAdapter(dict(stores={'scheduler':'redis://localhost/0'},resources={}))
+        with patch.object(managed,'execute',side_effect=[RuntimeError('temporary'),'{"stable":true}']) as execute, patch.object(managed.time,'sleep'):
+            self.assertEqual(adapter.boundary({'command':['agent']},'inspect'),{'stable':True})
+        self.assertEqual(execute.call_count,2)
+
+    def test_read_only_inspection_does_not_take_mutation_lock(self):
+        import sys
+        from recovery_under_test import agent
+        with patch.object(sys,'argv',['agent','--plan','/plan','inspect']), patch.object(agent,'load',return_value={}), patch.object(agent,'identity',return_value={}), patch.object(agent,'exclusive',side_effect=AssertionError('read took lock')), patch('builtins.print'):
+            agent.main()
+
     def test_no_programming_before_controller_ready(self):
         resource=dict(execution_boundaries=['runner','controller'],controller_boundary='controller',restore_boundary='baseline')
         adapter=ManagedAdapter(dict(stores={'scheduler':'redis://localhost/0'},resources={'board':resource}))
