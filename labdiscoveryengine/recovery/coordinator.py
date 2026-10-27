@@ -91,19 +91,26 @@ class Coordinator:
                 self._same_generation(state)
                 item['epoch'] = uuid.uuid4().hex
                 self._save(state)  # invalidate delayed backend start/cleanup requests
+                item['operation'] = 'hold'
                 self.adapter.hold(name, item['epoch'])
                 held = True
+                item['operation'] = 'fence'
                 self.adapter.fence(name, item['epoch'])
                 self._same_generation(state)
                 # Repeating this phase after a coordinator crash starts with a
                 # fresh cold boundary. Never replay against a running executor.
+                item['operation'] = 'interrupt_resource_sessions'
                 self.adapter.interrupt_resource_sessions(name, item['epoch'])
+                item['operation'] = 'retire'
                 self.adapter.retire(name, item['epoch'])
+                item['operation'] = 'restore'
                 item['baseline'] = self.adapter.restore(name, item['epoch'])
+                item['operation'] = 'verify'
                 identity = self.adapter.verify(name)
                 self._same_generation(state)
+                item['operation'] = 'release'
                 self.adapter.release(name, item['epoch'])
-                item.update(phase='ready', identity=identity, attempts=0, error=None, fence_unconfirmed=False)
+                item.update(phase='ready', identity=identity, attempts=0, error=None, operation=None, fence_unconfirmed=False)
                 self._save(state)
             except GenerationChanged:
                 # The current epoch cannot reopen ANY resource. The next step

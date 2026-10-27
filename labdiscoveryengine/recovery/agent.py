@@ -303,9 +303,18 @@ def run_transient(plan, name, epoch):
         raise RuntimeError('Transient restore requires retired old work')
     save(authorization_path(plan,name),dict(epoch=epoch,generation=state['generation']))
     import sys
-    process = subprocess.Popen([sys.executable,'-I','-m',__package__+'.agent','--plan',plan['_path'],
-                                '--program',name,'enter'], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
-                               text=True)
+    # Keep the latest component diagnostic privately on the host. Discarding
+    # stderr makes a failed physical baseline impossible to diagnose without
+    # repeating it. Never include this log in the public receipt or HTTP health.
+    log_path = Path(plan['state_directory']) / ('restore-' + plan['id'] + '.log')
+    fd = os.open(str(log_path), os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW, 0o600)
+    try:
+        os.fchmod(fd, 0o600)
+        process = subprocess.Popen([sys.executable,'-I','-m',__package__+'.agent','--plan',plan['_path'],
+                                    '--program',name,'enter'], stdout=subprocess.PIPE, stderr=fd,
+                                   text=True)
+    finally:
+        os.close(fd)
     try:
         output,_ = process.communicate(timeout=300)
         if process.returncode:

@@ -45,6 +45,8 @@ try:
  agent.fence(plan,e1);agent.retire(plan,e1)
  assert agent.run_transient(plan,name,e1)==dict(profile='test-only')
  assert not agent.boundary(plan,name).pids();results['successful_operation_leaves_no_descendants']=True
+ assert (state/'restore-transient-qualification.log').stat().st_mode & 0o777 == 0o600
+ results['component_diagnostic_is_private']=True
  agent.fence(plan,e2);agent.retire(plan,e2)
  process=subprocess.Popen([sys.executable,'-I','-m','labsland_recovery.agent','--plan',str(planfile),
     '--program',name,'--epoch',e2,'run'],env=dict(os.environ,QUALIFY_DELAY='1'),stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)

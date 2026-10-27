@@ -20,7 +20,7 @@ assert os.environ.get('LAB_RECOVERY_DISPOSABLE_VM') == 'yes'
 assert os.geteuid() == 0
 version = 1 if Path('/sys/fs/cgroup/freezer/cgroup.procs').exists() else 2
 root = '/sys/fs/cgroup/freezer/labsland-recovery/' if version == 1 else '/sys/fs/cgroup/labsland-recovery/'
-name = 'll-recovery-qualification:executor'
+name = 'll-recovery-qualification:qualification-executor'
 config = Path('/etc/supervisor/conf.d/ll-recovery-qualification.conf')
 assert not config.exists()
 tmp = Path(tempfile.mkdtemp(prefix='ll-recovery-qualification-',dir='/var/tmp'))
@@ -36,7 +36,7 @@ if os.fork() == 0:
 while True: time.sleep(.1)
 ''')
 child.chmod(0o644)
-config.write_text('''[program:executor]
+config.write_text('''[program:qualification-executor]
 command=/opt/ll-recovery-test/bin/python -I -m labsland_recovery.agent --plan %s --program %s enter
 directory=/
 user=root
@@ -49,7 +49,7 @@ stopwaitsecs=2
 stdout_logfile=%s
 stderr_logfile=%s
 [group:ll-recovery-qualification]
-programs=executor
+programs=qualification-executor
 ''' % (plan_file,name,tmp/'out.log',tmp/'err.log'))
 config.chmod(0o644)
 plan=dict(version=1,id='qualification',programs=[name],start_programs=[name],
