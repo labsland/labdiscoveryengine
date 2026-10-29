@@ -44,6 +44,11 @@ class FakeAsyncRedis:
         self.values = {}
         self.published = []
 
+    async def time(self):
+        import time
+        now = time.time()
+        return int(now), int((now % 1) * 1000000)
+
     async def hget(self, key, field):
         return self.values.get(key, {}).get(field)
 
@@ -156,7 +161,8 @@ class AsyncProcessorCleanupTest(unittest.IsolatedAsyncioTestCase):
         key = ReservationKeys(processor.reservation_id).base()
         store.values[owner] = 'reservation-1'
         with patch.object(processor_module, 'aioredis_store', store):
-            await processor.initialize_laboratory(None)
+            from tests.test_scheduling_health import _reservation_request
+            await processor.initialize_laboratory(_reservation_request(['resource-1']))
         self.assertIn(owner, store.values)
         self.assertEqual(store.values[key]['reconciliation_required'], '1')
         self.assertEqual(store.values[key]['status'], 'broken')

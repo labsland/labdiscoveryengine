@@ -11,6 +11,12 @@
 -------------------------------------
 
 local resource = ARGV[1]
+-- Validate before popping queues: a bad deployment setting must not lose work.
+local initialization_timeout = tonumber(ARGV[4] or '300')
+if not initialization_timeout or initialization_timeout <= 0 or
+   initialization_timeout ~= initialization_timeout or initialization_timeout == math.huge then
+    return redis.error_reply('Invalid initialization timeout')
+end
 
 -- Managed recovery deployments bind admission to the Redis process whose
 -- durable maintenance journals were reconciled at worker startup. A Redis
@@ -67,6 +73,9 @@ for _, priority in ipairs(priorities) do
             if assigned ~= 0 then
                 -- Claim and retention are one atomic operation. The existing
                 -- one-hour queue deadline must not expire an owned session.
+                local now = redis.call('TIME')
+                redis.call('hset', key, 'initialization_deadline',
+                    tonumber(now[1]) + tonumber(now[2]) / 1000000 + initialization_timeout)
                 redis.call("persist", key)
                 redis.call("persist", key .. ":resources")
                 redis.call("persist", "lde:external-request:" .. reservation_id)

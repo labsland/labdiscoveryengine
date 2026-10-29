@@ -138,6 +138,7 @@ class AsyncLuaScripts:
                 return None
             epoch = item['epoch']
         return await self._run_lua_script(ScriptNames.assign_reservation_to_resource,
-                                         args=[resource_name, maintenance_run_id, epoch])
+                                         args=[resource_name, maintenance_run_id, epoch,
+                                               current_app.config.get('RESERVATION_INITIALIZATION_TIMEOUT', 300)])
 
 async_lua_scripts = AsyncLuaScripts()

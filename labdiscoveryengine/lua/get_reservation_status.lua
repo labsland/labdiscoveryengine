@@ -24,6 +24,33 @@ if redis.call('hexists', reservation_key, 'recovery_interrupted') == 1 then
     return {'broken', false, false, false, 'Laboratory restarted; please reserve again', false}
 end
 
+-- Deadlines terminate the user-facing session, never the hardware lease.
+-- Keep a separate durable marker so a late worker reply cannot revive it,
+-- and so a live processor can still finish the known backend session safely.
+local expired = redis.call('hget', reservation_key, 'deadline_expired')
+if not expired and status and status ~= 'finished' and status ~= 'broken' and status ~= 'unavailable' then
+    local field = 'session_deadline'
+    if status == 'pending' or status == 'queued' or status == 'initializing' then
+        field = 'initialization_deadline'
+    end
+    local raw = redis.call('hget', reservation_key, field)
+    if not raw then raw = redis.call('hget', reservation_key, 'initialization_deadline') end
+    if raw then
+        local deadline = tonumber(raw)
+        local now = redis.call('TIME')
+        if not deadline or deadline ~= deadline or deadline == math.huge or
+           tonumber(now[1]) + tonumber(now[2]) / 1000000 >= deadline then
+            expired = field
+            redis.call('hsetnx', reservation_key, 'deadline_expired', expired)
+            redis.call('publish', reservation_key .. ':channel', 'deadline-expired')
+        end
+    end
+end
+if expired then
+    return {'broken', false, false, false, 'Session time limit reached; please reserve again',
+            redis.call('hget', reservation_key, 'resource') or false}
+end
+
 if status == "pending" or status == "queued" then
 
     local resources = redis.call("smembers", reservation_key .. ":resources")

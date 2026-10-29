@@ -108,7 +108,8 @@ class ResourceReservationProcessor:
         could expose hardware that may still be restoring or running user code.
         """
         if self.recovery_managed:
-            return await self.ownership('quarantine', reconciliation_required='1', status='broken')
+            await self.ownership('quarantine', reconciliation_required='1', status='broken')
+            return
         logger.error(f"[{self.resource.identifier}] Reservation {self.reservation_id} failed closed: {reason}")
         # Also preserve an ownership marker created by an older worker that
         # still used an expiry. Never extend another reservation's marker.
@@ -132,6 +133,33 @@ class ResourceReservationProcessor:
         Mark the reservation as cancelled and wait until it is deleted on the other side
         """
         return await self.finish(reservation_request=reservation_request, session_id=session_id)
+
+    async def deadline_remaining(self, field):
+        if await aioredis_store.hget(self.reservation_keys.base(), 'deadline_expired'):
+            return 0
+        value = await aioredis_store.hget(self.reservation_keys.base(), field)
+        if value is None:
+            return None  # Pre-upgrade records get a bound when processing resumes.
+        try:
+            deadline = float(value)
+            if not math.isfinite(deadline):
+                return 0
+        except (TypeError, ValueError, OverflowError):
+            return 0
+        seconds, micros = await aioredis_store.time()
+        return max(0, deadline - (seconds + micros / 1000000))
+
+    async def set_deadline_once(self, field, duration):
+        if isinstance(duration, bool) or not math.isfinite(float(duration)) or float(duration) <= 0:
+            raise ValueError('Invalid reservation duration')
+        seconds, micros = await aioredis_store.time()
+        await aioredis_store.hsetnx(self.reservation_keys.base(), field,
+                                   seconds + micros / 1000000 + float(duration))
+
+    async def expire_session(self, field):
+        await self.ownership()
+        await aioredis_store.hsetnx(self.reservation_keys.base(), 'deadline_expired', field)
+        await aioredis_store.publish(self.reservation_keys.channel(), 'deadline-expired')
 
     async def process(self):
         """
@@ -174,6 +202,14 @@ class ResourceReservationProcessor:
             reservation_request: ReservationRequest = ReservationRequest.fromdict(metadata)
 
             await self.ownership()
+            # Legacy records receive a one-time bound, never renewed on restart.
+            timeout = current_app.config.get('RESERVATION_INITIALIZATION_TIMEOUT', 300) if has_app_context() else 300
+            try:
+                await self.set_deadline_once('initialization_deadline', timeout)
+                if status == ReservationKeys.states.ready:
+                    await self.set_deadline_once('session_deadline', reservation_request.max_time)
+            except (ValueError, TypeError, OverflowError):
+                return await self.fail_closed('Invalid reservation deadline')
             self.client: AbstractResourceClient = self.get_client()
 
             session_id = await aioredis_store.hget(self.reservation_keys.base(), ReservationKeys.parameters.session_id)
@@ -250,8 +286,15 @@ class ResourceReservationProcessor:
             return await self.fail_closed('Laboratory start was already attempted')
         await self.ownership()
 
+        remaining = await self.deadline_remaining('initialization_deadline')
+        if remaining is not None and remaining <= 0:
+            await self.expire_session('initialization_deadline')
+            return await self.fail_closed('Laboratory initialization deadline elapsed')
         try:
-            url, session_id = await self.client.start(reservation_request)
+            await self.set_deadline_once('session_deadline', reservation_request.max_time)
+            await self.ownership()
+            remaining = await self.deadline_remaining('initialization_deadline')
+            url, session_id = await asyncio.wait_for(self.client.start(reservation_request), timeout=remaining)
         except Exception as err:
             logger.error(f"[{self.resource.identifier}] Error: failed to start reservation {self.reservation_id}: {err}", exc_info=True)
             return await self.fail_closed("Laboratory start outcome is uncertain")
@@ -267,6 +310,9 @@ class ResourceReservationProcessor:
                 }
             })
         
+        remaining = await self.deadline_remaining('initialization_deadline')
+        if remaining is not None and remaining <= 0:
+            await self.expire_session('initialization_deadline')
         status = ReservationKeys.states.ready
 
         await self.transition(status, resource=self.resource.identifier, url=url, session_id=session_id)
@@ -275,7 +321,16 @@ class ResourceReservationProcessor:
 
     async def wait_for_reservation_being_over(self, session_id: str, max_time: float = 30) -> str:
         await self.ownership()
-        should_finish: int = await self.get_should_finish_with_retry(session_id)
+        remaining = await self.deadline_remaining('session_deadline')
+        if remaining is not None and remaining <= 0:
+            await self.expire_session('session_deadline')
+            return ReservationKeys.states.finishing
+        try:
+            should_finish: int = await asyncio.wait_for(
+                self.get_should_finish_with_retry(session_id), timeout=remaining)
+        except asyncio.TimeoutError:
+            await self.expire_session('session_deadline')
+            return ReservationKeys.states.finishing
         # should_finish is either the time left or for next poll or -1 if it finished
         # if it is exactly zero, it might wait forever
 
@@ -287,20 +342,28 @@ class ResourceReservationProcessor:
         else: # if positive, wait the time left or 
             waiting_time = min(should_finish, max_time)
 
+        remaining = await self.deadline_remaining('session_deadline')
+        if remaining is not None:
+            waiting_time = min(waiting_time, remaining)
+
         # We have to wait for waiting_time. But we might wait shorter if there is activity
         # (e.g., cancellation), so we wait in a different way.
-        t0 = time.time()
+        t0 = time.monotonic()
 
         async with aioredis_store.pubsub() as pubsub:
             await pubsub.subscribe(self.reservation_keys.channel())
-            elapsed = time.time() - t0
+            elapsed = time.monotonic() - t0
             while elapsed <= waiting_time:
                 message = await pubsub.get_message(timeout=waiting_time - elapsed)
-                elapsed = time.time() - t0
+                elapsed = time.monotonic() - t0
                 await self.ownership()
                 if await self.did_user_cancel():
                     return ReservationKeys.states.cancelling
         
+        remaining = await self.deadline_remaining('session_deadline')
+        if remaining is not None and remaining <= 0:
+            await self.expire_session('session_deadline')
+            return ReservationKeys.states.finishing
         return ReservationKeys.states.ready
 
     async def get_should_finish_with_retry(self, session_id: str) -> int:

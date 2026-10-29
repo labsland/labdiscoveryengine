@@ -14,6 +14,8 @@ class Config:
     SERIAL_RECOVERY_STATE_DIR: Optional[str] = os.environ.get('SERIAL_RECOVERY_STATE_DIR')
     SERIAL_RECOVERY_RESOURCES: str = os.environ.get('SERIAL_RECOVERY_RESOURCES') or ''
 
+    # Independent of backend replies; starts at atomic resource assignment.
+    RESERVATION_INITIALIZATION_TIMEOUT: float = float(os.environ.get('RESERVATION_INITIALIZATION_TIMEOUT') or '300')
     DEFAULT_MAX_TIME: float = float(os.environ.get('DEFAULT_MAX_TIME') or '300')
     DEFAULT_RESOURCE_LOGIN: Optional[str] = os.environ.get('DEFAULT_RESOURCE_LOGIN')
     DEFAULT_RESOURCE_PASSWORD: Optional[str] = os.environ.get('DEFAULT_RESOURCE_PASSWORD')

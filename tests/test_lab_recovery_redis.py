@@ -97,7 +97,9 @@ class RecoveryRedis(unittest.IsolatedAsyncioTestCase):
             with patch.object(processor_module,'aioredis_store',connection), \
                  patch.object(scheduler_redis,'maintenance_run_id',self.run_id), \
                  patch.object(processor_module,'is_mongo_active',return_value=False):
-                with self.assertRaises(OwnershipLost):await p.initialize_laboratory(None)
+                with self.assertRaises(OwnershipLost):
+                    from tests.test_scheduling_health import _reservation_request
+                    await p.initialize_laboratory(_reservation_request(['board-1']))
         finally:await connection.aclose()
         self.assertEqual(self.r.hget('lde:reservations:student','status'),'broken')
         self.assertIsNone(self.r.hget('lde:reservations:student','session_id'))

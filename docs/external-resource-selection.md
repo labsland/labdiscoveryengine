@@ -76,3 +76,27 @@ waiting. There is deliberately no force-release endpoint in this change.
 Tests include isolated Redis Lua allocation/status, scoped discovery, idempotent
 admission, lost startup, malformed cleanup, restart cancellation and stale-owner
 release. They use vendor-neutral fake resources, not live equipment.
+
+## Independent session deadlines
+
+Resource assignment atomically records `initialization_deadline` using Redis
+server time. `RESERVATION_INITIALIZATION_TIMEOUT` defaults to 300 seconds and must
+be finite and positive. Queue waiting time is separate: the existing queue TTL
+still applies before assignment. The worker records `session_deadline` once,
+using the request's finite positive `max_time`, immediately before backend start;
+initialization therefore consumes session time as it does in the backend schedule.
+Restarting a worker never renews either recorded deadline. Pre-upgrade records
+without these fields receive a one-time bound when a new worker processes them;
+a coordinated cold upgrade already terminates old sessions.
+
+The worker bounds start and status waits independently of backend replies,
+including `should_finish=0`. Status polling also checks the persisted deadlines,
+so a worker lost after assignment cannot leave a user waiting forever. Expiry is
+latched in `deadline_expired` and reported as `broken`, without a session URL or
+backend session ID. A late ready response cannot revive the user session.
+
+This marker does **not** release the hardware assignment or erase cleanup state.
+A live worker disposes a known backend session and releases ownership only after
+confirmed cleanup. An uncertain start or cleanup remains quarantined for the
+existing recovery procedure. Ownership, epoch, Redis-generation, process and
+maintenance protections are unchanged. No new service or scheduler is required.
