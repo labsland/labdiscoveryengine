@@ -8,6 +8,10 @@
 --
 ------------------------------------------
 
+-- Redis 3.2/4 require effect replication for writes after TIME. Enable it
+-- before any write so assignment and expiry also replay safely from AOF.
+redis.replicate_commands()
+
 local reservation_id = ARGV[1]
 
 local external_session_id = nil

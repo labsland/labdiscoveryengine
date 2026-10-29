@@ -92,7 +92,9 @@ class ReservationDeadlines(unittest.IsolatedAsyncioTestCase):
         self.assert_terminal_retained()
 
     async def test_initialization_timeout_cancels_wait_but_keeps_uncertain_hardware(self):
-        self.claim(timeout=.05, managed=True)
+        # Allow startup work before exercising cancellation of the hung call.
+        # A 50ms budget could expire before start() on a loaded test host.
+        self.claim(timeout=1, managed=True)
         client = Client(start_delay=60)
         await self.run_processor(client)
         self.assertEqual(client.starts, 1)

@@ -100,3 +100,14 @@ A live worker disposes a known backend session and releases ownership only after
 confirmed cleanup. An uncertain start or cleanup remains quarantined for the
 existing recovery procedure. Ownership, epoch, Redis-generation, process and
 maintenance protections are unchanged. No new service or scheduler is required.
+
+### Redis deadline script compatibility
+
+The assignment and status scripts enable effect replication before their first
+write. Redis 4 rejects writes after `TIME` in its default script-replication mode;
+effect replication also makes AOF replay preserve the original deadline and
+terminal expiry marker. Keep this call ahead of queue/ownership mutations.
+Run `tests/test_deadline_replication.py` and `tests/test_reservation_deadlines.py`
+with Redis 4.0.9 and the current Redis binary on `PATH`; each test uses its own
+local server. Existing cleanup, ownership, epoch and Redis-identity guards remain
+required. A successful deadline test does not qualify a production rollout.
